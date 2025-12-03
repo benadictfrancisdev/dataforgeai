@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Upload } from "lucide-react";
+import { Link } from "react-router-dom";
 import heroBg from "@/assets/hero-bg.png";
 
 const Hero = () => {
@@ -45,11 +46,13 @@ const Hero = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center animate-slide-up" style={{ animationDelay: '0.3s' }}>
-            <Button variant="hero" size="xl" className="group">
-              <Upload className="w-5 h-5" />
-              Upload Your Data
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Button>
+            <Link to="/data-agent">
+              <Button variant="hero" size="xl" className="group">
+                <Upload className="w-5 h-5" />
+                Upload Your Data
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </Button>
+            </Link>
             <Button variant="glass" size="xl">
               Watch Demo
             </Button>
