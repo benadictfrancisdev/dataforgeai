@@ -101,6 +101,7 @@ export type Database = {
           row_count: number | null
           status: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           cleaned_data?: Json | null
@@ -115,6 +116,7 @@ export type Database = {
           row_count?: number | null
           status?: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           cleaned_data?: Json | null
@@ -128,6 +130,31 @@ export type Database = {
           raw_data?: Json | null
           row_count?: number | null
           status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          display_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          display_name?: string | null
+          id?: string
           updated_at?: string
         }
         Relationships: []

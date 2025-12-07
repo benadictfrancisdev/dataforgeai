@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
 import { Upload, FileSpreadsheet, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 import type { DatasetState } from "@/pages/DataAgent";
 
 interface DataUploadProps {
@@ -12,6 +12,7 @@ interface DataUploadProps {
 const DataUpload = ({ onDataLoaded }: DataUploadProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { user } = useAuth();
 
   const parseCSV = (text: string): Record<string, unknown>[] => {
     const lines = text.trim().split("\n");
@@ -41,6 +42,11 @@ const DataUpload = ({ onDataLoaded }: DataUploadProps) => {
   };
 
   const processFile = async (file: File) => {
+    if (!user) {
+      toast.error("Please sign in to upload data");
+      return;
+    }
+
     setIsLoading(true);
     try {
       const text = await file.text();
@@ -61,7 +67,27 @@ const DataUpload = ({ onDataLoaded }: DataUploadProps) => {
       const columns = Object.keys(data[0]);
       const datasetName = file.name.replace(/\.(csv|json)$/i, '');
 
+      // Save to database
+      const { data: savedDataset, error } = await supabase
+        .from('datasets')
+        .insert([{
+          name: datasetName,
+          original_filename: file.name,
+          raw_data: JSON.parse(JSON.stringify(data)),
+          columns: JSON.parse(JSON.stringify(columns)),
+          row_count: data.length,
+          column_count: columns.length,
+          file_size: file.size,
+          status: 'uploaded',
+          user_id: user.id
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
       onDataLoaded({
+        id: savedDataset.id,
         name: datasetName,
         rawData: data,
         columns,
@@ -84,7 +110,7 @@ const DataUpload = ({ onDataLoaded }: DataUploadProps) => {
     if (file) {
       processFile(file);
     }
-  }, []);
+  }, [user]);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -156,7 +182,7 @@ const DataUpload = ({ onDataLoaded }: DataUploadProps) => {
               <li>• Ensure your CSV has headers in the first row</li>
               <li>• JSON should be an array of objects with consistent keys</li>
               <li>• For large datasets, keep it under 10,000 rows for best performance</li>
-              <li>• Data is processed locally and sent to AI only during analysis</li>
+              <li>• Your data is saved securely and linked to your account</li>
             </ul>
           </div>
         </div>
