@@ -5,8 +5,9 @@ import DataUpload from "@/components/data-agent/DataUpload";
 import DataPreview from "@/components/data-agent/DataPreview";
 import AnalysisPanel from "@/components/data-agent/AnalysisPanel";
 import DataChat from "@/components/data-agent/DataChat";
+import VisualizationDashboard from "@/components/data-agent/VisualizationDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Table, BarChart3, MessageSquare } from "lucide-react";
+import { Upload, Table, BarChart3, MessageSquare, PieChart } from "lucide-react";
 
 export interface DatasetState {
   id?: string;
@@ -52,7 +53,7 @@ const DataAgent = () => {
 
           {/* Main Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-8 bg-card/50 p-1">
+            <TabsList className="grid w-full grid-cols-5 mb-8 bg-card/50 p-1">
               <TabsTrigger 
                 value="upload" 
                 className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -67,6 +68,14 @@ const DataAgent = () => {
               >
                 <Table className="w-4 h-4" />
                 <span className="hidden sm:inline">Preview</span>
+              </TabsTrigger>
+              <TabsTrigger 
+                value="visualize" 
+                disabled={!dataset}
+                className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <PieChart className="w-4 h-4" />
+                <span className="hidden sm:inline">Visualize</span>
               </TabsTrigger>
               <TabsTrigger 
                 value="analyze" 
@@ -97,6 +106,10 @@ const DataAgent = () => {
                   onDataCleaned={handleDataCleaned}
                 />
               )}
+            </TabsContent>
+
+            <TabsContent value="visualize" className="mt-0">
+              {dataset && <VisualizationDashboard dataset={dataset} />}
             </TabsContent>
 
             <TabsContent value="analyze" className="mt-0">
