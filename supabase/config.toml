@@ -1,1 +1,4 @@
 project_id = "ejchqqvaycugslbaxspn"
+
+[functions.data-agent]
+verify_jwt = false
