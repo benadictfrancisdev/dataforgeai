@@ -4,13 +4,32 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BarChart3, LineChart, PieChart, TrendingUp, Grid3X3, Database, Hash, Type, Maximize2, X, ScatterChart as ScatterIcon, AreaChart as AreaIcon } from "lucide-react";
+import { 
+  BarChart3, 
+  LineChart, 
+  PieChart, 
+  TrendingUp, 
+  Grid3X3, 
+  Database, 
+  Hash, 
+  Type, 
+  Maximize2, 
+  X, 
+  ScatterChart as ScatterIcon, 
+  AreaChart as AreaIcon,
+  Lightbulb,
+  FileText,
+  Wrench
+} from "lucide-react";
 import DataBarChart from "./charts/DataBarChart";
 import DataLineChart from "./charts/DataLineChart";
 import DataPieChart from "./charts/DataPieChart";
 import DataAreaChart from "./charts/DataAreaChart";
 import DataScatterChart from "./charts/DataScatterChart";
 import KPICard from "./charts/KPICard";
+import RecommendationChart from "./charts/RecommendationChart";
+import BusinessAnalyticsReport from "./charts/BusinessAnalyticsReport";
+import CustomChartBuilder from "./charts/CustomChartBuilder";
 import type { DatasetState } from "@/pages/DataAgent";
 
 interface VisualizationDashboardProps {
@@ -124,8 +143,6 @@ const VisualizationDashboard = ({ dataset }: VisualizationDashboardProps) => {
   }, [columns, numericColumns, categoricalColumns]);
 
   const renderChart = (type: ChartType, xKey: string, yKey: string, title: string, isFullscreen = false) => {
-    const height = isFullscreen ? 500 : 250;
-    
     const ChartWrapper = ({ children }: { children: React.ReactNode }) => (
       <div className="relative group">
         {!isFullscreen && (
@@ -233,17 +250,32 @@ const VisualizationDashboard = ({ dataset }: VisualizationDashboardProps) => {
         </div>
       )}
 
-      {/* Chart Tabs */}
+      {/* Main Visualization Tabs */}
       <Tabs defaultValue="auto" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-card/50">
-          <TabsTrigger value="auto" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            Auto Visualizations
+        <TabsList className="grid w-full grid-cols-5 bg-card/50">
+          <TabsTrigger value="auto" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm">
+            <BarChart3 className="h-4 w-4 mr-1 hidden sm:inline" />
+            Auto
           </TabsTrigger>
-          <TabsTrigger value="custom" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            Custom Charts
+          <TabsTrigger value="custom" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm">
+            <Wrench className="h-4 w-4 mr-1 hidden sm:inline" />
+            Builder
+          </TabsTrigger>
+          <TabsTrigger value="recommendations" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm">
+            <Lightbulb className="h-4 w-4 mr-1 hidden sm:inline" />
+            AI Insights
+          </TabsTrigger>
+          <TabsTrigger value="report" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm">
+            <FileText className="h-4 w-4 mr-1 hidden sm:inline" />
+            Report
+          </TabsTrigger>
+          <TabsTrigger value="quick" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm">
+            <PieChart className="h-4 w-4 mr-1 hidden sm:inline" />
+            Quick
           </TabsTrigger>
         </TabsList>
 
+        {/* Auto Visualizations */}
         <TabsContent value="auto" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {autoCharts.map((chart, index) => (
@@ -254,13 +286,42 @@ const VisualizationDashboard = ({ dataset }: VisualizationDashboardProps) => {
           </div>
         </TabsContent>
 
-        <TabsContent value="custom" className="mt-4 space-y-4">
+        {/* Custom Chart Builder */}
+        <TabsContent value="custom" className="mt-4">
+          <CustomChartBuilder 
+            data={data} 
+            columns={columns} 
+            columnTypes={columnTypes} 
+          />
+        </TabsContent>
+
+        {/* AI Recommendations */}
+        <TabsContent value="recommendations" className="mt-4">
+          <RecommendationChart 
+            data={data} 
+            columns={columns} 
+            columnTypes={columnTypes} 
+          />
+        </TabsContent>
+
+        {/* Business Analytics Report */}
+        <TabsContent value="report" className="mt-4">
+          <BusinessAnalyticsReport 
+            data={data} 
+            columns={columns} 
+            columnTypes={columnTypes}
+            datasetName={dataset.name}
+          />
+        </TabsContent>
+
+        {/* Quick Chart Creation */}
+        <TabsContent value="quick" className="mt-4 space-y-4">
           {/* Chart Configuration */}
           <Card className="bg-card/50 border-border/50">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <BarChart3 className="h-4 w-4" />
-                Configure Your Chart
+                Quick Chart
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -286,7 +347,7 @@ const VisualizationDashboard = ({ dataset }: VisualizationDashboardProps) => {
               {/* Axis Selection */}
               <div className="flex flex-wrap gap-4">
                 <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">X-Axis / Category:</span>
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">X-Axis:</span>
                   <Select value={selectedXAxis} onValueChange={setSelectedXAxis}>
                     <SelectTrigger className="flex-1 bg-background border-border">
                       <SelectValue placeholder="Select column" />
@@ -310,7 +371,7 @@ const VisualizationDashboard = ({ dataset }: VisualizationDashboardProps) => {
                   </Select>
                 </div>
                 <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-                  <span className="text-sm text-muted-foreground whitespace-nowrap">Y-Axis / Value:</span>
+                  <span className="text-sm text-muted-foreground whitespace-nowrap">Y-Axis:</span>
                   <Select value={selectedYAxis} onValueChange={setSelectedYAxis}>
                     <SelectTrigger className="flex-1 bg-background border-border">
                       <SelectValue placeholder="Select column" />
@@ -337,14 +398,12 @@ const VisualizationDashboard = ({ dataset }: VisualizationDashboardProps) => {
 
               {/* Recommendation hint */}
               <div className="text-xs text-muted-foreground bg-muted/30 p-2 rounded">
-                💡 <strong>Tip:</strong> For best results, use categorical columns (C) for X-axis grouping and numeric columns (N) for Y-axis values.
-                {selectedChartType === "scatter" && " Scatter plots work best with two numeric columns."}
-                {selectedChartType === "pie" && " Pie charts work best with a categorical column to show distribution."}
+                💡 <strong>Tip:</strong> Use categorical columns (C) for X-axis grouping and numeric columns (N) for Y-axis values.
               </div>
             </CardContent>
           </Card>
 
-          {/* Custom Chart Display */}
+          {/* Quick Chart Display */}
           {selectedXAxis && selectedYAxis && (
             <div className="grid grid-cols-1 gap-4">
               {renderChart(
@@ -356,7 +415,7 @@ const VisualizationDashboard = ({ dataset }: VisualizationDashboardProps) => {
             </div>
           )}
 
-          {/* Quick Comparison - Show multiple chart types for same data */}
+          {/* Compare Chart Types */}
           {selectedXAxis && selectedYAxis && (
             <Card className="bg-card/50 border-border/50">
               <CardHeader className="pb-2">
