@@ -12,19 +12,39 @@ interface DataPreviewProps {
   onDataCleaned: (cleanedData: Record<string, unknown>[]) => void;
 }
 
+interface ValidationReport {
+  isValid: boolean;
+  validationReport: { 
+    errors: Array<string | { column?: string; message?: string }>; 
+    warnings: Array<string | { column?: string; message?: string }>; 
+    suggestions: Array<string | { column?: string; message?: string }>; 
+  };
+  columnStats?: Record<string, { type: string; nullCount: number; uniqueCount: number; issues: string[] }>;
+}
+
+interface CleaningReport {
+  issuesFound: Array<string | { column?: string; message?: string }>;
+  actionsTaken: Array<string | { column?: string; message?: string }>;
+  rowsAffected: number;
+}
+
+// Helper function to safely render report items
+const renderReportItem = (item: string | { column?: string; message?: string } | unknown): string => {
+  if (typeof item === 'string') return item;
+  if (typeof item === 'object' && item !== null) {
+    const obj = item as { column?: string; message?: string };
+    if (obj.column && obj.message) return `${obj.column}: ${obj.message}`;
+    if (obj.message) return obj.message;
+    return JSON.stringify(item);
+  }
+  return String(item);
+};
+
 const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
   const [isValidating, setIsValidating] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
-  const [validationReport, setValidationReport] = useState<{
-    isValid: boolean;
-    validationReport: { errors: string[]; warnings: string[]; suggestions: string[] };
-    columnStats: Record<string, { type: string; nullCount: number; uniqueCount: number; issues: string[] }>;
-  } | null>(null);
-  const [cleaningReport, setCleaningReport] = useState<{
-    issuesFound: string[];
-    actionsTaken: string[];
-    rowsAffected: number;
-  } | null>(null);
+  const [validationReport, setValidationReport] = useState<ValidationReport | null>(null);
+  const [cleaningReport, setCleaningReport] = useState<CleaningReport | null>(null);
 
   const displayData = dataset.cleanedData || dataset.rawData;
   const previewRows = displayData.slice(0, 10);
@@ -35,15 +55,28 @@ const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
       const { data, error } = await supabase.functions.invoke('data-agent', {
         body: { 
           action: 'validate', 
-          data: dataset.rawData.slice(0, 100), // Send sample for validation
+          data: dataset.rawData.slice(0, 100),
           datasetName: dataset.name 
         }
       });
 
       if (error) throw error;
-      setValidationReport(data);
+      
+      // Normalize the validation report data
+      const normalizedReport: ValidationReport = {
+        isValid: data.isValid ?? false,
+        validationReport: {
+          errors: Array.isArray(data.validationReport?.errors) ? data.validationReport.errors : [],
+          warnings: Array.isArray(data.validationReport?.warnings) ? data.validationReport.warnings : [],
+          suggestions: Array.isArray(data.validationReport?.suggestions) ? data.validationReport.suggestions : []
+        },
+        columnStats: data.columnStats
+      };
+      
+      setValidationReport(normalizedReport);
       toast.success("Validation complete!");
     } catch (error) {
+      console.error("Validation error:", error);
       toast.error(error instanceof Error ? error.message : "Validation failed");
     } finally {
       setIsValidating(false);
@@ -56,7 +89,7 @@ const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
       const { data, error } = await supabase.functions.invoke('data-agent', {
         body: { 
           action: 'clean', 
-          data: dataset.rawData.slice(0, 500), // Limit for AI processing
+          data: dataset.rawData.slice(0, 500),
           datasetName: dataset.name 
         }
       });
@@ -65,10 +98,23 @@ const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
       
       if (data.cleanedData) {
         onDataCleaned(data.cleanedData);
-        setCleaningReport(data.cleaningReport);
+        
+        // Normalize cleaning report
+        const normalizedCleaningReport: CleaningReport = {
+          issuesFound: Array.isArray(data.cleaningReport?.issuesFound) ? data.cleaningReport.issuesFound : [],
+          actionsTaken: Array.isArray(data.cleaningReport?.actionsTaken || data.cleaningReport?.actionsToken) 
+            ? (data.cleaningReport?.actionsTaken || data.cleaningReport?.actionsToken) 
+            : [],
+          rowsAffected: data.cleaningReport?.rowsAffected ?? 0
+        };
+        
+        setCleaningReport(normalizedCleaningReport);
         toast.success("Data cleaned successfully!");
+      } else {
+        toast.warning("Cleaning completed but no cleaned data returned");
       }
     } catch (error) {
+      console.error("Cleaning error:", error);
       toast.error(error instanceof Error ? error.message : "Cleaning failed");
     } finally {
       setIsCleaning(false);
@@ -132,7 +178,9 @@ const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
             <div>
               <p className="text-sm font-medium text-destructive mb-1">Errors:</p>
               <ul className="text-sm text-muted-foreground list-disc list-inside">
-                {validationReport.validationReport.errors.map((e, i) => <li key={i}>{e}</li>)}
+                {validationReport.validationReport.errors.map((e, i) => (
+                  <li key={i}>{renderReportItem(e)}</li>
+                ))}
               </ul>
             </div>
           )}
@@ -141,7 +189,9 @@ const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
             <div>
               <p className="text-sm font-medium text-yellow-400 mb-1">Warnings:</p>
               <ul className="text-sm text-muted-foreground list-disc list-inside">
-                {validationReport.validationReport.warnings.map((w, i) => <li key={i}>{w}</li>)}
+                {validationReport.validationReport.warnings.map((w, i) => (
+                  <li key={i}>{renderReportItem(w)}</li>
+                ))}
               </ul>
             </div>
           )}
@@ -150,7 +200,9 @@ const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
             <div>
               <p className="text-sm font-medium text-primary mb-1">Suggestions:</p>
               <ul className="text-sm text-muted-foreground list-disc list-inside">
-                {validationReport.validationReport.suggestions.map((s, i) => <li key={i}>{s}</li>)}
+                {validationReport.validationReport.suggestions.map((s, i) => (
+                  <li key={i}>{renderReportItem(s)}</li>
+                ))}
               </ul>
             </div>
           )}
@@ -173,7 +225,9 @@ const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
             <div>
               <p className="text-sm font-medium mb-1">Issues Found:</p>
               <ul className="text-sm text-muted-foreground list-disc list-inside">
-                {cleaningReport.issuesFound.map((i, idx) => <li key={idx}>{i}</li>)}
+                {cleaningReport.issuesFound.map((item, idx) => (
+                  <li key={idx}>{renderReportItem(item)}</li>
+                ))}
               </ul>
             </div>
           )}
@@ -182,7 +236,9 @@ const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
             <div>
               <p className="text-sm font-medium mb-1">Actions Taken:</p>
               <ul className="text-sm text-muted-foreground list-disc list-inside">
-                {cleaningReport.actionsTaken.map((a, idx) => <li key={idx}>{a}</li>)}
+                {cleaningReport.actionsTaken.map((item, idx) => (
+                  <li key={idx}>{renderReportItem(item)}</li>
+                ))}
               </ul>
             </div>
           )}

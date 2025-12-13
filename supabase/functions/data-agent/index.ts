@@ -11,12 +11,14 @@ serve(async (req) => {
   }
 
   try {
-    const { action, data, datasetName, question, conversationHistory } = await req.json();
+    const { action, data, datasetName, question, conversationHistory, projectDetails, projectGoals, projectStatus, columns } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
+
+    console.log(`Processing action: ${action} for dataset: ${datasetName}`);
 
     let systemPrompt = "";
     let userPrompt = "";
@@ -31,8 +33,10 @@ serve(async (req) => {
 
 Return a JSON object with:
 - "cleanedData": the cleaned dataset as an array of objects
-- "cleaningReport": { "issuesFound": [], "actionsToken": [], "rowsAffected": number }
-- "dataQualityScore": number between 0-100`;
+- "cleaningReport": { "issuesFound": ["string descriptions"], "actionsTaken": ["string descriptions"], "rowsAffected": number }
+- "dataQualityScore": number between 0-100
+
+IMPORTANT: All items in issuesFound and actionsTaken arrays must be plain strings, not objects.`;
         userPrompt = `Clean this dataset named "${datasetName}":\n${JSON.stringify(data, null, 2)}`;
         break;
 
@@ -46,8 +50,10 @@ Return a JSON object with:
 
 Return a JSON object with:
 - "isValid": boolean
-- "validationReport": { "errors": [], "warnings": [], "suggestions": [] }
-- "columnStats": { columnName: { type, nullCount, uniqueCount, issues: [] } }`;
+- "validationReport": { "errors": ["string descriptions"], "warnings": ["string descriptions"], "suggestions": ["string descriptions"] }
+- "columnStats": { columnName: { type: "string", nullCount: number, uniqueCount: number, issues: ["string descriptions"] } }
+
+IMPORTANT: All items in errors, warnings, and suggestions arrays must be plain strings, not objects.`;
         userPrompt = `Validate this dataset named "${datasetName}":\n${JSON.stringify(data, null, 2)}`;
         break;
 
@@ -67,10 +73,44 @@ Return a JSON object with:
         userPrompt = `Analyze this dataset named "${datasetName}" and provide insights:\n${JSON.stringify(data, null, 2)}`;
         break;
 
+      case "generate-report":
+        systemPrompt = `You are an expert business report generator AI. Create comprehensive, professional project reports.
+
+Return a JSON object with:
+- "title": string (professional report title)
+- "executiveSummary": string (2-3 paragraph executive summary)
+- "introduction": string (introduction to the analysis)
+- "objectives": ["objective 1", "objective 2", ...] (list of project objectives)
+- "problemStatement": string (the problem being addressed)
+- "methodology": string (description of analysis methodology)
+- "toolsAndTechnologies": ["tool 1", "tool 2", ...] (tools used)
+- "implementationSteps": ["step 1", "step 2", ...] (implementation steps)
+- "keyFindings": ["finding 1", "finding 2", ...] (key findings as plain strings)
+- "recommendations": ["recommendation 1", "recommendation 2", ...] (recommendations as plain strings)
+- "conclusion": string (conclusion paragraph)
+- "futureScope": ["scope 1", "scope 2", ...] (future possibilities)
+
+Make the report professional, detailed, and suitable for academic, business, or client use.
+IMPORTANT: All array items must be plain strings, not objects.`;
+        
+        userPrompt = `Generate a comprehensive project report for:
+Dataset: ${datasetName}
+Columns: ${columns?.join(", ") || "Not specified"}
+Records: ${data?.length || 0}
+Project Status: ${projectStatus || "In Progress"}
+Project Details: ${projectDetails || "Data analysis project"}
+Project Goals: ${projectGoals || "Analyze data and provide insights"}
+
+Sample Data:
+${JSON.stringify(data?.slice(0, 10), null, 2)}`;
+        break;
+
       case "chat":
         systemPrompt = `You are a helpful AI assistant specialized in data analysis. You have access to a dataset and can answer questions about it. Be precise, use specific numbers from the data, and provide actionable insights.
 
-The dataset you're analyzing is called "${datasetName}".`;
+The dataset you're analyzing is called "${datasetName}".
+
+If the user mentions email addresses, phone numbers, or WhatsApp numbers, acknowledge them and suggest relevant actions.`;
         
         const messages = [
           { role: "system", content: systemPrompt },
@@ -78,6 +118,8 @@ The dataset you're analyzing is called "${datasetName}".`;
           ...(conversationHistory || []),
           { role: "user", content: question }
         ];
+
+        console.log("Sending chat request to AI gateway");
 
         const chatResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -110,6 +152,8 @@ The dataset you're analyzing is called "${datasetName}".`;
         }
 
         const chatData = await chatResponse.json();
+        console.log("Chat response received successfully");
+        
         return new Response(JSON.stringify({ 
           response: chatData.choices[0].message.content 
         }), {
@@ -121,6 +165,8 @@ The dataset you're analyzing is called "${datasetName}".`;
     }
 
     // For non-chat actions
+    console.log(`Sending ${action} request to AI gateway`);
+    
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -158,10 +204,13 @@ The dataset you're analyzing is called "${datasetName}".`;
     const aiData = await response.json();
     const content = aiData.choices[0].message.content;
     
+    console.log(`${action} response received successfully`);
+    
     let result;
     try {
       result = JSON.parse(content);
     } catch {
+      console.warn("Failed to parse AI response as JSON, returning raw content");
       result = { rawResponse: content };
     }
 
