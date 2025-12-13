@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Database, Menu, X, LogOut, User } from "lucide-react";
+import { CloudLightning, Menu, X, LogOut, User } from "lucide-react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
@@ -33,7 +33,7 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-cyan-400 flex items-center justify-center shadow-button">
-              <Database className="w-5 h-5 text-primary-foreground" />
+              <CloudLightning className="w-5 h-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold text-foreground">
               AI<span className="text-primary">DataForge</span>
