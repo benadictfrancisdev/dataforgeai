@@ -8,8 +8,9 @@ import DataPreview from "@/components/data-agent/DataPreview";
 import AnalysisPanel from "@/components/data-agent/AnalysisPanel";
 import DataChat from "@/components/data-agent/DataChat";
 import VisualizationDashboard from "@/components/data-agent/VisualizationDashboard";
+import ReportGenerator from "@/components/data-agent/ReportGenerator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Upload, Table, BarChart3, MessageSquare, PieChart, Loader2 } from "lucide-react";
+import { Upload, Table, BarChart3, MessageSquare, PieChart, Loader2, FileText } from "lucide-react";
 
 export interface DatasetState {
   id?: string;
@@ -75,7 +76,7 @@ const DataAgent = () => {
 
           {/* Main Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-8 bg-card/50 p-1">
+            <TabsList className="grid w-full grid-cols-6 mb-8 bg-card/50 p-1">
               <TabsTrigger 
                 value="upload" 
                 className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -108,6 +109,14 @@ const DataAgent = () => {
                 <span className="hidden sm:inline">Analyze</span>
               </TabsTrigger>
               <TabsTrigger 
+                value="report" 
+                disabled={!dataset}
+                className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                <FileText className="w-4 h-4" />
+                <span className="hidden sm:inline">Report</span>
+              </TabsTrigger>
+              <TabsTrigger 
                 value="chat" 
                 disabled={!dataset}
                 className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
@@ -136,6 +145,10 @@ const DataAgent = () => {
 
             <TabsContent value="analyze" className="mt-0">
               {dataset && <AnalysisPanel dataset={dataset} />}
+            </TabsContent>
+
+            <TabsContent value="report" className="mt-0">
+              {dataset && <ReportGenerator dataset={dataset} />}
             </TabsContent>
 
             <TabsContent value="chat" className="mt-0">
