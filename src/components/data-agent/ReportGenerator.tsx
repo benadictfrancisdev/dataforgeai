@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -6,8 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   FileText,
   Download,
@@ -21,6 +23,13 @@ import {
   BarChart3,
   Settings,
   FileDown,
+  RefreshCw,
+  Clock,
+  Zap,
+  BookOpen,
+  Lightbulb,
+  Rocket,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -60,6 +69,26 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
   const [projectGoals, setProjectGoals] = useState("");
   const [projectStatus, setProjectStatus] = useState("in-progress");
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [autoUpdate, setAutoUpdate] = useState(false);
+  const [lastDataHash, setLastDataHash] = useState<string>("");
+
+  // Calculate simple hash of data for change detection
+  const calculateDataHash = useCallback(() => {
+    const dataToHash = dataset.cleanedData || dataset.rawData;
+    return JSON.stringify(dataToHash.slice(0, 50)).length + "-" + dataToHash.length;
+  }, [dataset]);
+
+  // Auto-update effect
+  useEffect(() => {
+    if (!autoUpdate || !report) return;
+
+    const currentHash = calculateDataHash();
+    if (currentHash !== lastDataHash && lastDataHash !== "") {
+      console.log("Data changed, regenerating report...");
+      generateReport();
+    }
+    setLastDataHash(currentHash);
+  }, [dataset, autoUpdate, report, lastDataHash, calculateDataHash]);
 
   const generateReport = async () => {
     setIsGenerating(true);
@@ -68,7 +97,12 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
     try {
       const dataToAnalyze = dataset.cleanedData || dataset.rawData;
       
-      setGenerationProgress(30);
+      setGenerationProgress(20);
+      
+      // Simulate progressive loading
+      const progressInterval = setInterval(() => {
+        setGenerationProgress(prev => Math.min(prev + 10, 70));
+      }, 500);
       
       const { data, error } = await supabase.functions.invoke('data-agent', {
         body: {
@@ -82,38 +116,44 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
         }
       });
 
-      setGenerationProgress(70);
+      clearInterval(progressInterval);
+      setGenerationProgress(85);
 
       if (error) throw error;
 
       // Parse the AI response
       const reportData: GeneratedReport = {
         title: data.title || `${dataset.name} Analysis Report`,
-        executiveSummary: data.executiveSummary || data.summary || "Analysis complete.",
-        introduction: data.introduction || `This report presents a comprehensive analysis of the ${dataset.name} dataset.`,
-        objectives: data.objectives || ["Analyze data patterns", "Identify insights", "Provide recommendations"],
-        problemStatement: data.problemStatement || "Understanding the data to derive actionable insights.",
-        methodology: data.methodology || "Data was analyzed using AI-powered analysis techniques including statistical analysis and pattern recognition.",
+        executiveSummary: data.executiveSummary || data.summary || "Comprehensive analysis has been completed for the provided dataset, revealing key patterns and actionable insights for strategic decision-making.",
+        introduction: data.introduction || `This report presents a comprehensive analysis of the ${dataset.name} dataset, utilizing advanced AI-powered analytics to extract meaningful insights and recommendations.`,
+        objectives: Array.isArray(data.objectives) ? data.objectives : ["Analyze data patterns and trends", "Identify key insights and correlations", "Provide actionable recommendations", "Generate comprehensive documentation"],
+        problemStatement: data.problemStatement || "Understanding complex data patterns to derive actionable business intelligence and strategic insights.",
+        methodology: data.methodology || "The analysis employed a multi-phase approach including data validation, statistical analysis, pattern recognition, and AI-driven insight generation.",
         datasetOverview: {
           name: dataset.name,
           records: dataToAnalyze.length,
           columns: dataset.columns.length,
           dataTypes: dataset.columns.map(c => {
             const sample = dataToAnalyze[0]?.[c];
-            return typeof sample === 'number' ? 'Numeric' : 'Text';
+            return typeof sample === 'number' ? 'Numeric' : typeof sample === 'boolean' ? 'Boolean' : 'Text';
           }),
         },
-        toolsAndTechnologies: data.toolsAndTechnologies || ["AI Data Analysis", "Statistical Processing", "Pattern Recognition"],
-        implementationSteps: data.implementationSteps || ["Data Upload", "Data Cleaning", "Analysis", "Report Generation"],
-        keyFindings: data.keyFindings || data.insights?.map((i: { title?: string; description?: string }) => i.title || i.description) || ["Analysis completed successfully"],
-        recommendations: data.recommendations?.map((r: { action?: string; reason?: string }) => r.action || r.reason) || data.recommendations || ["Review the detailed findings"],
-        conclusion: data.conclusion || "The analysis has been completed successfully with actionable insights provided.",
-        futureScope: data.futureScope || ["Continuous monitoring", "Advanced analysis", "Predictive modeling"],
+        toolsAndTechnologies: Array.isArray(data.toolsAndTechnologies) ? data.toolsAndTechnologies : ["AI Data Analysis Engine", "Statistical Processing Module", "Pattern Recognition System", "Natural Language Generation"],
+        implementationSteps: Array.isArray(data.implementationSteps) ? data.implementationSteps : ["Data Upload & Validation", "Automated Data Cleaning", "Statistical Analysis", "Pattern Detection", "Insight Generation", "Report Compilation"],
+        keyFindings: Array.isArray(data.keyFindings) 
+          ? data.keyFindings.map((f: unknown) => typeof f === 'string' ? f : (f as { title?: string; description?: string })?.title || (f as { title?: string; description?: string })?.description || String(f))
+          : ["Analysis completed successfully with significant patterns identified"],
+        recommendations: Array.isArray(data.recommendations) 
+          ? data.recommendations.map((r: unknown) => typeof r === 'string' ? r : (r as { action?: string; reason?: string })?.action || (r as { action?: string; reason?: string })?.reason || String(r))
+          : ["Review detailed findings for strategic implementation"],
+        conclusion: data.conclusion || "The analysis has been successfully completed, providing comprehensive insights and actionable recommendations for data-driven decision making.",
+        futureScope: Array.isArray(data.futureScope) ? data.futureScope : ["Continuous monitoring and trend analysis", "Predictive modeling implementation", "Advanced correlation studies", "Real-time dashboard integration"],
         generatedAt: new Date().toISOString(),
       };
 
       setReport(reportData);
       setGenerationProgress(100);
+      setLastDataHash(calculateDataHash());
       toast.success("Report generated successfully!");
     } catch (error) {
       console.error("Report generation error:", error);
@@ -128,34 +168,51 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
 
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
     let yPos = 20;
 
-    // Title
-    doc.setFontSize(20);
-    doc.setFont("helvetica", "bold");
-    doc.text(report.title, pageWidth / 2, yPos, { align: "center" });
-    yPos += 15;
+    // Helper function to check page break
+    const checkPageBreak = (neededSpace: number = 30) => {
+      if (yPos + neededSpace > pageHeight - 20) {
+        doc.addPage();
+        yPos = 20;
+      }
+    };
 
-    // Date
-    doc.setFontSize(10);
+    // Title Page
+    doc.setFillColor(20, 184, 166); // Primary color
+    doc.rect(0, 0, pageWidth, 60, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.setFont("helvetica", "bold");
+    doc.text(report.title, pageWidth / 2, 35, { align: "center" });
+    
+    doc.setFontSize(12);
     doc.setFont("helvetica", "normal");
-    doc.text(`Generated: ${new Date(report.generatedAt).toLocaleDateString()}`, pageWidth / 2, yPos, { align: "center" });
-    yPos += 20;
+    doc.text(`Generated: ${new Date(report.generatedAt).toLocaleDateString()}`, pageWidth / 2, 50, { align: "center" });
+    
+    yPos = 80;
+    doc.setTextColor(0, 0, 0);
 
     // Executive Summary
-    doc.setFontSize(14);
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
+    doc.setTextColor(20, 184, 166);
     doc.text("Executive Summary", 14, yPos);
-    yPos += 8;
+    yPos += 10;
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
+    doc.setTextColor(60, 60, 60);
     const summaryLines = doc.splitTextToSize(report.executiveSummary, pageWidth - 28);
     doc.text(summaryLines, 14, yPos);
-    yPos += summaryLines.length * 5 + 10;
+    yPos += summaryLines.length * 5 + 15;
 
     // Dataset Overview Table
-    doc.setFontSize(14);
+    checkPageBreak(50);
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
+    doc.setTextColor(20, 184, 166);
     doc.text("Dataset Overview", 14, yPos);
     yPos += 8;
 
@@ -164,76 +221,109 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
       head: [["Property", "Value"]],
       body: [
         ["Dataset Name", report.datasetOverview.name],
-        ["Total Records", report.datasetOverview.records.toString()],
+        ["Total Records", report.datasetOverview.records.toLocaleString()],
         ["Total Columns", report.datasetOverview.columns.toString()],
+        ["Status", projectStatus.charAt(0).toUpperCase() + projectStatus.slice(1).replace('-', ' ')],
       ],
-      theme: "grid",
-      headStyles: { fillColor: [79, 70, 229] },
+      theme: "striped",
+      headStyles: { fillColor: [20, 184, 166], textColor: [255, 255, 255] },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
     });
 
-    yPos = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15;
+    yPos = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 20;
 
-    // Check for page break
-    if (yPos > 250) {
-      doc.addPage();
-      yPos = 20;
-    }
-
-    // Key Findings
-    doc.setFontSize(14);
+    // Objectives
+    checkPageBreak(40);
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
-    doc.text("Key Findings", 14, yPos);
-    yPos += 8;
+    doc.setTextColor(20, 184, 166);
+    doc.text("Objectives", 14, yPos);
+    yPos += 10;
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
+    doc.setTextColor(60, 60, 60);
+    report.objectives.forEach((obj, idx) => {
+      checkPageBreak(10);
+      doc.text(`${idx + 1}. ${obj}`, 18, yPos);
+      yPos += 7;
+    });
+    yPos += 10;
+
+    // Key Findings
+    checkPageBreak(40);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(20, 184, 166);
+    doc.text("Key Findings", 14, yPos);
+    yPos += 10;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(60, 60, 60);
     report.keyFindings.forEach((finding, idx) => {
-      if (yPos > 270) {
-        doc.addPage();
-        yPos = 20;
-      }
-      const findingText = `${idx + 1}. ${finding}`;
-      const lines = doc.splitTextToSize(findingText, pageWidth - 28);
-      doc.text(lines, 14, yPos);
-      yPos += lines.length * 5 + 3;
+      checkPageBreak(15);
+      const findingLines = doc.splitTextToSize(`${idx + 1}. ${finding}`, pageWidth - 32);
+      doc.text(findingLines, 18, yPos);
+      yPos += findingLines.length * 5 + 3;
     });
     yPos += 10;
 
     // Recommendations
-    if (yPos > 250) {
-      doc.addPage();
-      yPos = 20;
-    }
-    doc.setFontSize(14);
+    checkPageBreak(40);
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
+    doc.setTextColor(20, 184, 166);
     doc.text("Recommendations", 14, yPos);
-    yPos += 8;
+    yPos += 10;
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
+    doc.setTextColor(60, 60, 60);
     report.recommendations.forEach((rec, idx) => {
-      if (yPos > 270) {
-        doc.addPage();
-        yPos = 20;
-      }
-      const recText = `${idx + 1}. ${rec}`;
-      const lines = doc.splitTextToSize(recText, pageWidth - 28);
-      doc.text(lines, 14, yPos);
-      yPos += lines.length * 5 + 3;
+      checkPageBreak(15);
+      const recLines = doc.splitTextToSize(`${idx + 1}. ${rec}`, pageWidth - 32);
+      doc.text(recLines, 18, yPos);
+      yPos += recLines.length * 5 + 3;
     });
     yPos += 10;
 
     // Conclusion
-    if (yPos > 250) {
-      doc.addPage();
-      yPos = 20;
-    }
-    doc.setFontSize(14);
+    checkPageBreak(40);
+    doc.setFontSize(16);
     doc.setFont("helvetica", "bold");
+    doc.setTextColor(20, 184, 166);
     doc.text("Conclusion", 14, yPos);
-    yPos += 8;
+    yPos += 10;
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
+    doc.setTextColor(60, 60, 60);
     const conclusionLines = doc.splitTextToSize(report.conclusion, pageWidth - 28);
     doc.text(conclusionLines, 14, yPos);
+    yPos += conclusionLines.length * 5 + 15;
+
+    // Future Scope
+    checkPageBreak(40);
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(20, 184, 166);
+    doc.text("Future Scope", 14, yPos);
+    yPos += 10;
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(60, 60, 60);
+    report.futureScope.forEach((scope, idx) => {
+      checkPageBreak(10);
+      doc.text(`• ${scope}`, 18, yPos);
+      yPos += 7;
+    });
+
+    // Footer on all pages
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: "center" });
+      doc.text("Generated by AIDataForge", 14, pageHeight - 10);
+    }
 
     // Save
     doc.save(`${report.title.replace(/\s+/g, '_')}_Report.pdf`);
@@ -243,80 +333,117 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
   return (
     <div className="space-y-6">
       {/* Input Section */}
-      <Card className="bg-card/50 border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            AI Report Generator
-          </CardTitle>
-          <CardDescription>
-            Generate comprehensive project reports automatically based on your dataset
-          </CardDescription>
+      <Card className="premium-card">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary to-cyan-500 shadow-button">
+              <FileText className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className="text-xl">AI Report Generator</CardTitle>
+              <CardDescription className="mt-1">
+                Generate comprehensive, professional reports automatically
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Switch
+                  id="auto-update"
+                  checked={autoUpdate}
+                  onCheckedChange={setAutoUpdate}
+                />
+                <Label htmlFor="auto-update" className="text-sm flex items-center gap-1.5 cursor-pointer">
+                  <RefreshCw className={`h-3.5 w-3.5 ${autoUpdate ? 'text-primary' : 'text-muted-foreground'}`} />
+                  Auto-update
+                </Label>
+              </div>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <CardContent className="space-y-5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Project Details</label>
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+                Project Details
+              </Label>
               <Textarea
-                placeholder="Describe your project, requirements, and context..."
+                placeholder="Describe your project, requirements, context, and any specific areas of focus..."
                 value={projectDetails}
                 onChange={(e) => setProjectDetails(e.target.value)}
-                className="min-h-[100px]"
+                className="min-h-[120px] bg-background resize-none"
               />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-medium">Project Goals</label>
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Target className="h-4 w-4 text-muted-foreground" />
+                Project Goals
+              </Label>
               <Textarea
-                placeholder="What are the goals and expected outcomes?"
+                placeholder="What are the goals, expected outcomes, and success metrics?"
                 value={projectGoals}
                 onChange={(e) => setProjectGoals(e.target.value)}
-                className="min-h-[100px]"
+                className="min-h-[120px] bg-background resize-none"
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="space-y-2 flex-1">
-              <label className="text-sm font-medium">Project Status</label>
+          <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+            <div className="space-y-2 w-full sm:w-48">
+              <Label className="text-sm font-medium">Project Status</Label>
               <Select value={projectStatus} onValueChange={setProjectStatus}>
-                <SelectTrigger>
+                <SelectTrigger className="bg-background">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="planning">Planning</SelectItem>
-                  <SelectItem value="in-progress">In Progress</SelectItem>
-                  <SelectItem value="review">Review</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="planning">
+                    <span className="flex items-center gap-2">
+                      <Clock className="h-4 w-4" /> Planning
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="in-progress">
+                    <span className="flex items-center gap-2">
+                      <Zap className="h-4 w-4" /> In Progress
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="review">
+                    <span className="flex items-center gap-2">
+                      <Eye className="h-4 w-4" /> Review
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="completed">
+                    <span className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" /> Completed
+                    </span>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">&nbsp;</label>
-              <Button
-                onClick={generateReport}
-                disabled={isGenerating}
-                className="bg-gradient-to-r from-primary to-cyan-400 hover:opacity-90"
-              >
-                {isGenerating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Generating...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Generate Report
-                  </>
-                )}
-              </Button>
-            </div>
+            <Button
+              onClick={generateReport}
+              disabled={isGenerating}
+              size="lg"
+              className="bg-gradient-to-r from-primary to-cyan-500 hover:opacity-90 shadow-button transition-all"
+            >
+              {isGenerating ? (
+                <>
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5 mr-2" />
+                  Generate Report
+                </>
+              )}
+            </Button>
           </div>
 
           {isGenerating && (
-            <div className="space-y-2">
+            <div className="space-y-2 animate-fade-in">
               <div className="flex justify-between text-sm">
-                <span>Generating report...</span>
-                <span>{generationProgress}%</span>
+                <span className="text-muted-foreground">Generating comprehensive report...</span>
+                <span className="font-medium">{generationProgress}%</span>
               </div>
               <Progress value={generationProgress} className="h-2" />
             </div>
@@ -326,23 +453,25 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
 
       {/* Generated Report Preview */}
       {report && (
-        <div className="space-y-4">
+        <div className="space-y-5 animate-fade-in">
           {/* Report Header */}
-          <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30">
-            <CardHeader>
-              <div className="flex items-start justify-between">
+          <Card className="overflow-hidden">
+            <div className="h-2 bg-gradient-to-r from-primary via-cyan-500 to-primary" />
+            <CardHeader className="pb-4">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <div>
-                  <CardTitle className="text-xl">{report.title}</CardTitle>
-                  <CardDescription className="mt-1">
-                    Dataset: {dataset.name}
+                  <CardTitle className="text-2xl">{report.title}</CardTitle>
+                  <CardDescription className="mt-1.5 flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4" />
+                    Dataset: {dataset.name} • {report.datasetOverview.records.toLocaleString()} records
                   </CardDescription>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">
-                    <Calendar className="h-3 w-3 mr-1" />
+                <div className="flex items-center gap-3">
+                  <Badge variant="outline" className="text-xs">
+                    <Calendar className="h-3 w-3 mr-1.5" />
                     {new Date(report.generatedAt).toLocaleDateString()}
                   </Badge>
-                  <Button onClick={exportToPDF} variant="outline" size="sm">
+                  <Button onClick={exportToPDF} className="shadow-button">
                     <FileDown className="w-4 h-4 mr-2" />
                     Export PDF
                   </Button>
@@ -351,94 +480,145 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
             </CardHeader>
           </Card>
 
-          {/* Executive Summary */}
-          <Card className="bg-card/50 border-border/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Target className="h-4 w-4" />
-                Executive Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{report.executiveSummary}</p>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-5">
+              {/* Executive Summary */}
+              <Card className="stat-card">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    Executive Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{report.executiveSummary}</p>
+                </CardContent>
+              </Card>
 
-          {/* Dataset Overview */}
-          <Card className="bg-card/50 border-border/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Dataset Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-2xl font-bold">{report.datasetOverview.records.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">Records</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <p className="text-2xl font-bold">{report.datasetOverview.columns}</p>
-                  <p className="text-xs text-muted-foreground">Columns</p>
-                </div>
-                <div className="p-3 rounded-lg bg-muted/30">
-                  <Badge variant="secondary" className="capitalize">{projectStatus}</Badge>
-                  <p className="text-xs text-muted-foreground mt-1">Status</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              {/* Key Findings */}
+              <Card className="stat-card">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" />
+                    Key Findings
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    {report.keyFindings.map((finding, idx) => (
+                      <li key={idx} className="flex items-start gap-3 text-sm">
+                        <div className="mt-1 flex-shrink-0 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center">
+                          <CheckCircle className="h-3 w-3 text-green-500" />
+                        </div>
+                        <span className="text-muted-foreground">{finding}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
 
-          {/* Key Findings */}
-          <Card className="bg-card/50 border-border/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" />
-                Key Findings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {report.keyFindings.map((finding, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm">
-                    <CheckCircle className="h-4 w-4 text-green-400 mt-0.5 flex-shrink-0" />
-                    <span>{finding}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+              {/* Recommendations */}
+              <Card className="stat-card">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium flex items-center gap-2">
+                    <Lightbulb className="h-4 w-4 text-yellow-500" />
+                    Recommendations
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-3">
+                    {report.recommendations.map((rec, idx) => (
+                      <li key={idx} className="flex items-start gap-3 text-sm">
+                        <div className="mt-1 flex-shrink-0 w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center">
+                          <AlertCircle className="h-3 w-3 text-primary" />
+                        </div>
+                        <span className="text-muted-foreground">{rec}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
 
-          {/* Recommendations */}
-          <Card className="bg-card/50 border-border/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <Settings className="h-4 w-4" />
-                Recommendations
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-2">
-                {report.recommendations.map((rec, idx) => (
-                  <li key={idx} className="flex items-start gap-2 text-sm">
-                    <AlertCircle className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
-                    <span>{rec}</span>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
+              {/* Conclusion */}
+              <Card className="stat-card">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium">Conclusion</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{report.conclusion}</p>
+                </CardContent>
+              </Card>
+            </div>
 
-          {/* Conclusion */}
-          <Card className="bg-card/50 border-border/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Conclusion</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground">{report.conclusion}</p>
-            </CardContent>
-          </Card>
+            {/* Sidebar */}
+            <div className="space-y-5">
+              {/* Dataset Overview */}
+              <Card className="stat-card">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium flex items-center gap-2">
+                    <BarChart3 className="h-4 w-4 text-primary" />
+                    Dataset Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="text-center p-3 rounded-lg bg-muted/50">
+                      <p className="text-2xl font-bold text-primary">{report.datasetOverview.records.toLocaleString()}</p>
+                      <p className="text-xs text-muted-foreground">Records</p>
+                    </div>
+                    <div className="text-center p-3 rounded-lg bg-muted/50">
+                      <p className="text-2xl font-bold text-primary">{report.datasetOverview.columns}</p>
+                      <p className="text-xs text-muted-foreground">Columns</p>
+                    </div>
+                  </div>
+                  <div className="pt-2">
+                    <Badge className="capitalize">{projectStatus.replace('-', ' ')}</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Objectives */}
+              <Card className="stat-card">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    Objectives
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {report.objectives.slice(0, 4).map((obj, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <div className="w-1.5 h-1.5 mt-2 rounded-full bg-primary flex-shrink-0" />
+                        {obj}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+
+              {/* Future Scope */}
+              <Card className="stat-card">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base font-medium flex items-center gap-2">
+                    <Rocket className="h-4 w-4 text-primary" />
+                    Future Scope
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {report.futureScope.slice(0, 4).map((scope, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                        <div className="w-1.5 h-1.5 mt-2 rounded-full bg-cyan-500 flex-shrink-0" />
+                        {scope}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </div>
       )}
     </div>
