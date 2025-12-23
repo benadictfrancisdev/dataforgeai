@@ -150,8 +150,56 @@ const DataAgent = () => {
                 )}
               </TabsContent>
 
+              <TabsContent value="nlp" className="mt-0 focus-visible:outline-none">
+                {dataset && (
+                  <NaturalLanguageEngine
+                    data={dataset.cleanedData || dataset.rawData}
+                    columns={dataset.columns}
+                    columnTypes={dataset.columns.reduce((acc, col) => {
+                      const sampleValues = (dataset.cleanedData || dataset.rawData).slice(0, 10).map(row => row[col]);
+                      const numericCount = sampleValues.filter(v => !isNaN(Number(v))).length;
+                      acc[col] = numericCount > 7 ? "numeric" : "categorical";
+                      return acc;
+                    }, {} as Record<string, "numeric" | "categorical" | "date">)}
+                    datasetName={dataset.name}
+                  />
+                )}
+              </TabsContent>
+
               <TabsContent value="visualize" className="mt-0 focus-visible:outline-none">
                 {dataset && <VisualizationDashboard dataset={dataset} />}
+              </TabsContent>
+
+              <TabsContent value="dashboard" className="mt-0 focus-visible:outline-none">
+                {dataset && (
+                  <AutoDashboard
+                    data={dataset.cleanedData || dataset.rawData}
+                    columns={dataset.columns}
+                    columnTypes={dataset.columns.reduce((acc, col) => {
+                      const sampleValues = (dataset.cleanedData || dataset.rawData).slice(0, 10).map(row => row[col]);
+                      const numericCount = sampleValues.filter(v => !isNaN(Number(v))).length;
+                      acc[col] = numericCount > 7 ? "numeric" : "categorical";
+                      return acc;
+                    }, {} as Record<string, "numeric" | "categorical" | "date">)}
+                    datasetName={dataset.name}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="predict" className="mt-0 focus-visible:outline-none">
+                {dataset && (
+                  <PredictiveAnalytics
+                    data={dataset.cleanedData || dataset.rawData}
+                    columns={dataset.columns}
+                    columnTypes={dataset.columns.reduce((acc, col) => {
+                      const sampleValues = (dataset.cleanedData || dataset.rawData).slice(0, 10).map(row => row[col]);
+                      const numericCount = sampleValues.filter(v => !isNaN(Number(v))).length;
+                      acc[col] = numericCount > 7 ? "numeric" : "categorical";
+                      return acc;
+                    }, {} as Record<string, "numeric" | "categorical" | "date">)}
+                    datasetName={dataset.name}
+                  />
+                )}
               </TabsContent>
 
               <TabsContent value="analyze" className="mt-0 focus-visible:outline-none">
