@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, data, datasetName, question, conversationHistory, projectDetails, projectGoals, projectStatus, columns, columnTypes, dataSummary } = await req.json();
+    const { action, data, datasetName, question, conversationHistory, projectDetails, projectGoals, projectStatus, columns, columnTypes, dataSummary, query, dataContext } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -153,6 +153,99 @@ Return JSON with:
         userPrompt = `Generate visualization insights for dataset "${datasetName}":
 ${dataSummary}`;
         break;
+
+      case "nlp-query":
+        // Natural Language Processing for data queries with >95% accuracy target
+        console.log(`Processing NLP query: ${query}`);
+        
+        const nlpSystemPrompt = `You are an expert Natural Language Processing engine for data analytics with >95% accuracy target.
+Your job is to understand user questions about data and provide precise, actionable answers.
+
+Dataset: "${datasetName}"
+Data Context: ${dataContext || "Not provided"}
+Available Columns: ${columns?.join(", ") || "Not specified"}
+Column Types: ${JSON.stringify(columnTypes) || "Not specified"}
+
+CAPABILITIES:
+1. Trend Analysis - Identify patterns and trends in data
+2. Anomaly Detection - Find outliers and unusual patterns
+3. Correlation Analysis - Discover relationships between variables
+4. Summarization - Provide key metrics and summaries
+5. Chart Recommendations - Suggest appropriate visualizations
+6. Predictive Insights - Make predictions based on patterns
+
+RESPONSE FORMAT - Return JSON with:
+- "answer": string (detailed, accurate response to the query - use markdown formatting)
+- "confidence": number (85-99, your confidence level in the answer)
+- "charts": array of { "type": "bar"|"line"|"pie"|"area"|"scatter", "title": string, "xAxis": string, "yAxis": string, "description": string }
+- "insights": array of strings (key insights discovered)
+- "actions": array of { "label": string, "action": string, "type": "chart"|"filter"|"export"|"analyze" }
+- "queryType": string ("trend"|"anomaly"|"correlation"|"summary"|"prediction"|"dashboard"|"general")
+
+Be precise, use specific numbers from the data context, and provide actionable insights.
+Format your answer with markdown for better readability.
+IMPORTANT: Aim for >95% accuracy by being specific and data-driven.`;
+
+        const nlpMessages = [
+          { role: "system", content: nlpSystemPrompt },
+          ...(conversationHistory || []),
+          { role: "user", content: query }
+        ];
+
+        console.log("Sending NLP query to AI gateway");
+        
+        const nlpResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { 
+            Authorization: `Bearer ${LOVABLE_API_KEY}`, 
+            "Content-Type": "application/json" 
+          },
+          body: JSON.stringify({ 
+            model: "google/gemini-2.5-flash", 
+            messages: nlpMessages, 
+            response_format: { type: "json_object" } 
+          }),
+        });
+
+        if (!nlpResponse.ok) {
+          const errorText = await nlpResponse.text();
+          console.error("NLP AI gateway error:", nlpResponse.status, errorText);
+          if (nlpResponse.status === 429) {
+            return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
+              status: 429,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          if (nlpResponse.status === 402) {
+            return new Response(JSON.stringify({ error: "Payment required. Please add credits." }), {
+              status: 402,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
+          throw new Error(`AI gateway error: ${nlpResponse.status}`);
+        }
+
+        const nlpData = await nlpResponse.json();
+        console.log("NLP response received successfully");
+        
+        let nlpResult;
+        try {
+          nlpResult = JSON.parse(nlpData.choices[0].message.content);
+        } catch {
+          console.warn("Failed to parse NLP response as JSON");
+          nlpResult = { 
+            answer: nlpData.choices[0].message.content, 
+            confidence: 90,
+            charts: [],
+            insights: [],
+            actions: [],
+            queryType: "general"
+          };
+        }
+        
+        return new Response(JSON.stringify(nlpResult), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
 
       case "chat":
         systemPrompt = `You are a helpful AI assistant specialized in data analysis. Be precise and provide actionable insights.
