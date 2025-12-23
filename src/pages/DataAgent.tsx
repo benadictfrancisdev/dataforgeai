@@ -9,9 +9,12 @@ import AnalysisPanel from "@/components/data-agent/AnalysisPanel";
 import DataChat from "@/components/data-agent/DataChat";
 import VisualizationDashboard from "@/components/data-agent/VisualizationDashboard";
 import ReportGenerator from "@/components/data-agent/ReportGenerator";
+import NaturalLanguageEngine from "@/components/data-agent/NaturalLanguageEngine";
+import PredictiveAnalytics from "@/components/data-agent/PredictiveAnalytics";
+import AutoDashboard from "@/components/data-agent/AutoDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Table, BarChart3, MessageSquare, PieChart, Loader2, FileText, Sparkles } from "lucide-react";
+import { Upload, Table, BarChart3, MessageSquare, PieChart, Loader2, FileText, Sparkles, Activity, LayoutDashboard, Zap } from "lucide-react";
 
 export interface DatasetState {
   id?: string;
@@ -67,7 +70,10 @@ const DataAgent = () => {
   const tabs = [
     { value: "upload", label: "Upload", icon: Upload },
     { value: "preview", label: "Preview", icon: Table, requiresData: true },
+    { value: "nlp", label: "NLP Engine", icon: Zap, requiresData: true },
     { value: "visualize", label: "Visualize", icon: PieChart, requiresData: true },
+    { value: "dashboard", label: "Dashboard", icon: LayoutDashboard, requiresData: true },
+    { value: "predict", label: "Predict", icon: Activity, requiresData: true },
     { value: "analyze", label: "Analyze", icon: BarChart3, requiresData: true },
     { value: "report", label: "Report", icon: FileText, requiresData: true },
     { value: "chat", label: "Chat", icon: MessageSquare, requiresData: true },
