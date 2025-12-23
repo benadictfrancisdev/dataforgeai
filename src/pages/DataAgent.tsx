@@ -12,9 +12,11 @@ import ReportGenerator from "@/components/data-agent/ReportGenerator";
 import NaturalLanguageEngine from "@/components/data-agent/NaturalLanguageEngine";
 import PredictiveAnalytics from "@/components/data-agent/PredictiveAnalytics";
 import AutoDashboard from "@/components/data-agent/AutoDashboard";
+import RealTimeStream from "@/components/data-agent/RealTimeStream";
+import PowerBIDashboard from "@/components/data-agent/PowerBIDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Table, BarChart3, MessageSquare, PieChart, Loader2, FileText, Sparkles, Activity, LayoutDashboard, Zap } from "lucide-react";
+import { Upload, Table, BarChart3, MessageSquare, PieChart, Loader2, FileText, Sparkles, Activity, LayoutDashboard, Zap, Radio, Layers } from "lucide-react";
 
 export interface DatasetState {
   id?: string;
@@ -71,6 +73,8 @@ const DataAgent = () => {
     { value: "upload", label: "Upload", icon: Upload },
     { value: "preview", label: "Preview", icon: Table, requiresData: true },
     { value: "nlp", label: "NLP Engine", icon: Zap, requiresData: true },
+    { value: "powerbi", label: "Power BI", icon: Layers, requiresData: true },
+    { value: "stream", label: "Live Stream", icon: Radio, requiresData: true },
     { value: "visualize", label: "Visualize", icon: PieChart, requiresData: true },
     { value: "dashboard", label: "Dashboard", icon: LayoutDashboard, requiresData: true },
     { value: "predict", label: "Predict", icon: Activity, requiresData: true },
@@ -155,6 +159,50 @@ const DataAgent = () => {
                   <NaturalLanguageEngine
                     data={dataset.cleanedData || dataset.rawData}
                     columns={dataset.columns}
+                    columnTypes={dataset.columns.reduce((acc, col) => {
+                      const sampleValues = (dataset.cleanedData || dataset.rawData).slice(0, 10).map(row => row[col]);
+                      const numericCount = sampleValues.filter(v => !isNaN(Number(v))).length;
+                      acc[col] = numericCount > 7 ? "numeric" : "categorical";
+                      return acc;
+                    }, {} as Record<string, "numeric" | "categorical" | "date">)}
+                    datasetName={dataset.name}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="powerbi" className="mt-0 focus-visible:outline-none">
+                {dataset && (
+                  <PowerBIDashboard
+                    data={dataset.cleanedData || dataset.rawData}
+                    columns={dataset.columns}
+                    columnTypes={dataset.columns.reduce((acc, col) => {
+                      const sampleValues = (dataset.cleanedData || dataset.rawData).slice(0, 10).map(row => row[col]);
+                      const numericCount = sampleValues.filter(v => !isNaN(Number(v))).length;
+                      acc[col] = numericCount > 7 ? "numeric" : "categorical";
+                      return acc;
+                    }, {} as Record<string, "numeric" | "categorical" | "date">)}
+                    datasetName={dataset.name}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="stream" className="mt-0 focus-visible:outline-none">
+                {dataset && (
+                  <RealTimeStream
+                    data={dataset.cleanedData || dataset.rawData}
+                    columns={dataset.columns}
+                    columnTypes={dataset.columns.reduce((acc, col) => {
+                      const sampleValues = (dataset.cleanedData || dataset.rawData).slice(0, 10).map(row => row[col]);
+                      const numericCount = sampleValues.filter(v => !isNaN(Number(v))).length;
+                      acc[col] = numericCount > 7 ? "numeric" : "categorical";
+                      return acc;
+                    }, {} as Record<string, "numeric" | "categorical" | "date">)}
+                    datasetName={dataset.name}
+                  />
+                )}
+              </TabsContent>
+
+              <TabsContent value="visualize" className="mt-0 focus-visible:outline-none">
                     columnTypes={dataset.columns.reduce((acc, col) => {
                       const sampleValues = (dataset.cleanedData || dataset.rawData).slice(0, 10).map(row => row[col]);
                       const numericCount = sampleValues.filter(v => !isNaN(Number(v))).length;
