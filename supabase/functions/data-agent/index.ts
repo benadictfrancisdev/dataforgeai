@@ -11,7 +11,7 @@ serve(async (req) => {
   }
 
   try {
-    const { action, data, datasetName, question, conversationHistory, projectDetails, projectGoals, projectStatus, columns } = await req.json();
+    const { action, data, datasetName, question, conversationHistory, projectDetails, projectGoals, projectStatus, columns, columnTypes, dataSummary } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
@@ -105,54 +105,77 @@ Sample Data:
 ${JSON.stringify(data?.slice(0, 10), null, 2)}`;
         break;
 
-      case "chat":
-        systemPrompt = `You are a helpful AI assistant specialized in data analysis. You have access to a dataset and can answer questions about it. Be precise, use specific numbers from the data, and provide actionable insights.
+      case "visualization-chat":
+        systemPrompt = `You are an expert data visualization AI assistant. Help users understand their data and suggest the best visualizations.
+Dataset: "${datasetName}"
+Data Summary: ${dataSummary || "Not provided"}
 
-The dataset you're analyzing is called "${datasetName}".
+Provide insights, chart recommendations, and answer questions about data patterns. Return JSON with:
+- "answer": your response text
+- "suggestions": array of follow-up question suggestions
+- "chartSuggestion": optional { "type": "bar"|"line"|"pie"|"area"|"scatter", "xAxis": column, "yAxis": column }`;
 
-If the user mentions email addresses, phone numbers, or WhatsApp numbers, acknowledge them and suggest relevant actions.`;
-        
-        const messages = [
+        const vizMessages = [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Here's the dataset:\n${JSON.stringify(data, null, 2)}` },
           ...(conversationHistory || []),
           { role: "user", content: question }
         ];
 
-        console.log("Sending chat request to AI gateway");
+        const vizResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: vizMessages, response_format: { type: "json_object" } }),
+        });
+
+        if (!vizResponse.ok) {
+          throw new Error(`AI gateway error: ${vizResponse.status}`);
+        }
+
+        const vizData = await vizResponse.json();
+        let vizResult;
+        try {
+          vizResult = JSON.parse(vizData.choices[0].message.content);
+        } catch {
+          vizResult = { answer: vizData.choices[0].message.content, suggestions: [] };
+        }
+        
+        return new Response(JSON.stringify(vizResult), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+
+      case "generate-visualization-report":
+        systemPrompt = `You are an expert data visualization report generator. Create comprehensive insights for visualization reports.
+Return JSON with:
+- "summary": executive summary of data analysis
+- "insights": [{ "type": "insight"|"warning"|"opportunity"|"recommendation", "title": string, "description": string, "impact": "high"|"medium"|"low", "confidence": number, "category": string }]
+- "recommendations": array of visualization recommendation strings`;
+
+        userPrompt = `Generate visualization insights for dataset "${datasetName}":
+${dataSummary}`;
+        break;
+
+      case "chat":
+        systemPrompt = `You are a helpful AI assistant specialized in data analysis. Be precise and provide actionable insights.
+Dataset: "${datasetName}"`;
+        
+        const messages = [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Dataset:\n${JSON.stringify(data, null, 2)}` },
+          ...(conversationHistory || []),
+          { role: "user", content: question }
+        ];
 
         const chatResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${LOVABLE_API_KEY}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages,
-          }),
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: "google/gemini-2.5-flash", messages }),
         });
 
         if (!chatResponse.ok) {
-          const errorText = await chatResponse.text();
-          console.error("AI gateway error:", chatResponse.status, errorText);
-          if (chatResponse.status === 429) {
-            return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again later." }), {
-              status: 429,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-          if (chatResponse.status === 402) {
-            return new Response(JSON.stringify({ error: "Payment required. Please add credits." }), {
-              status: 402,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
           throw new Error(`AI gateway error: ${chatResponse.status}`);
         }
 
         const chatData = await chatResponse.json();
-        console.log("Chat response received successfully");
         
         return new Response(JSON.stringify({ 
           response: chatData.choices[0].message.content 
