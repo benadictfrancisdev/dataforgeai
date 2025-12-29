@@ -26,8 +26,8 @@ const Logo = ({ className, size = "md", showText = true }: LogoProps) => {
       {/* ChatGPT-style hexagonal logo with trust colors */}
       <div className={cn(
         "relative flex items-center justify-center rounded-xl",
-        "bg-gradient-to-br from-emerald-500 via-teal-500 to-cyan-600",
-        "shadow-lg shadow-emerald-500/25",
+        "bg-gradient-to-br from-blue-500 via-indigo-500 to-cyan-500",
+        "shadow-lg shadow-blue-500/25",
         sizeClasses[size]
       )}>
         {/* Inner hexagon pattern */}
@@ -93,8 +93,8 @@ const Logo = ({ className, size = "md", showText = true }: LogoProps) => {
 
       {showText && (
         <span className={cn("font-bold text-foreground tracking-tight", textSizeClasses[size])}>
-          Data<span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500">Forge</span>
-          <span className="text-xs ml-1 px-1.5 py-0.5 rounded bg-gradient-to-r from-emerald-500/10 to-teal-500/10 text-emerald-600 dark:text-emerald-400 font-medium align-super">AI</span>
+          Data<span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-indigo-500">Sense</span>
+          <span className="text-xs ml-1 px-1.5 py-0.5 rounded bg-gradient-to-r from-blue-500/10 to-indigo-500/10 text-blue-600 dark:text-blue-400 font-medium align-super">AI</span>
         </span>
       )}
     </div>

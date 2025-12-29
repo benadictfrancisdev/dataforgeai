@@ -50,12 +50,22 @@ const DataAgent = () => {
     }
   };
 
+  const getColumnTypes = () => {
+    if (!dataset) return {};
+    return dataset.columns.reduce((acc, col) => {
+      const sampleValues = (dataset.cleanedData || dataset.rawData).slice(0, 10).map(row => row[col]);
+      const numericCount = sampleValues.filter(v => !isNaN(Number(v))).length;
+      acc[col] = numericCount > 7 ? "numeric" : "categorical";
+      return acc;
+    }, {} as Record<string, "numeric" | "categorical" | "date">);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-cyan-500 flex items-center justify-center shadow-glow animate-pulse">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-glow animate-pulse">
               <Sparkles className="w-8 h-8 text-primary-foreground" />
             </div>
           </div>
@@ -109,7 +119,7 @@ const DataAgent = () => {
           {dataset && (
             <div className="flex justify-center mb-6 animate-slide-up">
               <Badge variant="secondary" className="px-4 py-2 text-sm gap-2">
-                <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
                 {dataset.name} • {dataset.rawData.length.toLocaleString()} rows • {dataset.columns.length} columns
                 {dataset.status === "cleaned" && (
                   <Badge className="ml-2 bg-primary/20 text-primary border-0">Cleaned</Badge>
@@ -159,12 +169,7 @@ const DataAgent = () => {
                   <NaturalLanguageEngine
                     data={dataset.cleanedData || dataset.rawData}
                     columns={dataset.columns}
-                    columnTypes={dataset.columns.reduce((acc, col) => {
-                      const sampleValues = (dataset.cleanedData || dataset.rawData).slice(0, 10).map(row => row[col]);
-                      const numericCount = sampleValues.filter(v => !isNaN(Number(v))).length;
-                      acc[col] = numericCount > 7 ? "numeric" : "categorical";
-                      return acc;
-                    }, {} as Record<string, "numeric" | "categorical" | "date">)}
+                    columnTypes={getColumnTypes()}
                     datasetName={dataset.name}
                   />
                 )}
@@ -175,12 +180,7 @@ const DataAgent = () => {
                   <PowerBIDashboard
                     data={dataset.cleanedData || dataset.rawData}
                     columns={dataset.columns}
-                    columnTypes={dataset.columns.reduce((acc, col) => {
-                      const sampleValues = (dataset.cleanedData || dataset.rawData).slice(0, 10).map(row => row[col]);
-                      const numericCount = sampleValues.filter(v => !isNaN(Number(v))).length;
-                      acc[col] = numericCount > 7 ? "numeric" : "categorical";
-                      return acc;
-                    }, {} as Record<string, "numeric" | "categorical" | "date">)}
+                    columnTypes={getColumnTypes()}
                     datasetName={dataset.name}
                   />
                 )}
@@ -191,24 +191,7 @@ const DataAgent = () => {
                   <RealTimeStream
                     data={dataset.cleanedData || dataset.rawData}
                     columns={dataset.columns}
-                    columnTypes={dataset.columns.reduce((acc, col) => {
-                      const sampleValues = (dataset.cleanedData || dataset.rawData).slice(0, 10).map(row => row[col]);
-                      const numericCount = sampleValues.filter(v => !isNaN(Number(v))).length;
-                      acc[col] = numericCount > 7 ? "numeric" : "categorical";
-                      return acc;
-                    }, {} as Record<string, "numeric" | "categorical" | "date">)}
-                    datasetName={dataset.name}
-                  />
-                )}
-              </TabsContent>
-
-              <TabsContent value="visualize" className="mt-0 focus-visible:outline-none">
-                    columnTypes={dataset.columns.reduce((acc, col) => {
-                      const sampleValues = (dataset.cleanedData || dataset.rawData).slice(0, 10).map(row => row[col]);
-                      const numericCount = sampleValues.filter(v => !isNaN(Number(v))).length;
-                      acc[col] = numericCount > 7 ? "numeric" : "categorical";
-                      return acc;
-                    }, {} as Record<string, "numeric" | "categorical" | "date">)}
+                    columnTypes={getColumnTypes()}
                     datasetName={dataset.name}
                   />
                 )}
@@ -223,12 +206,7 @@ const DataAgent = () => {
                   <AutoDashboard
                     data={dataset.cleanedData || dataset.rawData}
                     columns={dataset.columns}
-                    columnTypes={dataset.columns.reduce((acc, col) => {
-                      const sampleValues = (dataset.cleanedData || dataset.rawData).slice(0, 10).map(row => row[col]);
-                      const numericCount = sampleValues.filter(v => !isNaN(Number(v))).length;
-                      acc[col] = numericCount > 7 ? "numeric" : "categorical";
-                      return acc;
-                    }, {} as Record<string, "numeric" | "categorical" | "date">)}
+                    columnTypes={getColumnTypes()}
                     datasetName={dataset.name}
                   />
                 )}
@@ -239,12 +217,7 @@ const DataAgent = () => {
                   <PredictiveAnalytics
                     data={dataset.cleanedData || dataset.rawData}
                     columns={dataset.columns}
-                    columnTypes={dataset.columns.reduce((acc, col) => {
-                      const sampleValues = (dataset.cleanedData || dataset.rawData).slice(0, 10).map(row => row[col]);
-                      const numericCount = sampleValues.filter(v => !isNaN(Number(v))).length;
-                      acc[col] = numericCount > 7 ? "numeric" : "categorical";
-                      return acc;
-                    }, {} as Record<string, "numeric" | "categorical" | "date">)}
+                    columnTypes={getColumnTypes()}
                     datasetName={dataset.name}
                   />
                 )}
