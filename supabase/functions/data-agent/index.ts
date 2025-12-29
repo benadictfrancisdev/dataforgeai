@@ -1,8 +1,103 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+// Input validation constants
+const MAX_PAYLOAD_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_DATA_ROWS = 1000;
+const MAX_STRING_LENGTH = 5000;
+const MAX_ARRAY_LENGTH = 100;
+const MAX_CONVERSATION_HISTORY = 20;
+
+const VALID_ACTIONS = [
+  'clean', 'validate', 'analyze', 'generate-report', 
+  'visualization-chat', 'nlp-query', 'chat', 'generate-visualization-report'
+] as const;
+
+type ValidAction = typeof VALID_ACTIONS[number];
+
+// Sanitize string for use in prompts
+const sanitizeForPrompt = (input: string | undefined | null, maxLength = 200): string => {
+  if (!input) return '';
+  return String(input)
+    .replace(/[<>"`]/g, '')
+    .substring(0, maxLength)
+    .trim();
+};
+
+// Validate and sanitize input
+const validateInput = (body: any): { valid: boolean; error?: string; sanitized?: any } => {
+  if (!body || typeof body !== 'object') {
+    return { valid: false, error: 'Request body must be a JSON object' };
+  }
+
+  const { action, data, datasetName, question, conversationHistory, projectDetails, 
+          projectGoals, projectStatus, columns, columnTypes, dataSummary, query, dataContext } = body;
+
+  // Validate action
+  if (!action || !VALID_ACTIONS.includes(action)) {
+    return { valid: false, error: `Invalid action. Must be one of: ${VALID_ACTIONS.join(', ')}` };
+  }
+
+  // Validate data array if present
+  if (data !== undefined) {
+    if (!Array.isArray(data)) {
+      return { valid: false, error: 'Data must be an array' };
+    }
+    if (data.length > MAX_DATA_ROWS) {
+      return { valid: false, error: `Data exceeds maximum of ${MAX_DATA_ROWS} rows` };
+    }
+    // Validate each item is an object
+    for (let i = 0; i < data.length; i++) {
+      if (typeof data[i] !== 'object' || data[i] === null) {
+        return { valid: false, error: `Data item at index ${i} must be an object` };
+      }
+    }
+  }
+
+  // Validate conversation history
+  if (conversationHistory !== undefined) {
+    if (!Array.isArray(conversationHistory)) {
+      return { valid: false, error: 'Conversation history must be an array' };
+    }
+    if (conversationHistory.length > MAX_CONVERSATION_HISTORY) {
+      return { valid: false, error: `Conversation history exceeds maximum of ${MAX_CONVERSATION_HISTORY} messages` };
+    }
+  }
+
+  // Validate columns array
+  if (columns !== undefined) {
+    if (!Array.isArray(columns)) {
+      return { valid: false, error: 'Columns must be an array' };
+    }
+    if (columns.length > MAX_ARRAY_LENGTH) {
+      return { valid: false, error: `Columns exceeds maximum of ${MAX_ARRAY_LENGTH}` };
+    }
+  }
+
+  // Return sanitized inputs
+  return {
+    valid: true,
+    sanitized: {
+      action: action as ValidAction,
+      data: data || [],
+      datasetName: sanitizeForPrompt(datasetName, 100),
+      question: sanitizeForPrompt(question, 500),
+      conversationHistory: (conversationHistory || []).slice(0, MAX_CONVERSATION_HISTORY),
+      projectDetails: sanitizeForPrompt(projectDetails, 1000),
+      projectGoals: sanitizeForPrompt(projectGoals, 1000),
+      projectStatus: sanitizeForPrompt(projectStatus, 50),
+      columns: (columns || []).slice(0, MAX_ARRAY_LENGTH).map((c: any) => sanitizeForPrompt(String(c), 100)),
+      columnTypes: columnTypes || {},
+      dataSummary: sanitizeForPrompt(dataSummary, MAX_STRING_LENGTH),
+      query: sanitizeForPrompt(query, 500),
+      dataContext: sanitizeForPrompt(dataContext, 50000),
+    }
+  };
 };
 
 serve(async (req) => {
@@ -11,14 +106,76 @@ serve(async (req) => {
   }
 
   try {
-    const { action, data, datasetName, question, conversationHistory, projectDetails, projectGoals, projectStatus, columns, columnTypes, dataSummary, query, dataContext } = await req.json();
+    // Check payload size
+    const contentLength = req.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > MAX_PAYLOAD_SIZE) {
+      console.error('[DataAgent] Payload too large:', contentLength);
+      return new Response(
+        JSON.stringify({ error: 'Payload too large. Maximum size is 5MB.' }),
+        { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('[DataAgent] Missing authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Missing authorization header' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create authenticated Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    
+    if (!supabaseUrl || !supabaseAnonKey) {
+      console.error('[DataAgent] Missing Supabase configuration');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    // Verify user is authenticated
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    if (authError || !user) {
+      console.error('[DataAgent] Authentication failed:', authError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized. Please log in to continue.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    console.log(`[DataAgent] Authenticated user: ${user.id}`);
+
+    // Parse and validate request body
+    const body = await req.json();
+    const validation = validateInput(body);
+    
+    if (!validation.valid) {
+      console.error('[DataAgent] Validation error:', validation.error);
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { action, data, datasetName, question, conversationHistory, projectDetails, 
+            projectGoals, projectStatus, columns, columnTypes, dataSummary, query, dataContext } = validation.sanitized;
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log(`[DataAgent] Processing action: ${action} for dataset: ${datasetName}`);
+    console.log(`[DataAgent] Processing action: ${action} for dataset: ${datasetName} by user: ${user.id}`);
     console.log(`[DataAgent] Data rows: ${data?.length || 0}, Columns: ${columns?.length || 0}`);
 
     let systemPrompt = "";
@@ -401,7 +558,7 @@ ACCURACY REQUIREMENTS:
   } catch (error) {
     console.error("[DataAgent] Error:", error);
     return new Response(JSON.stringify({ 
-      error: error instanceof Error ? error.message : "An unexpected error occurred" 
+      error: "An unexpected error occurred. Please try again." 
     }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
