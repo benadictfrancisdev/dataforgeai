@@ -6,74 +6,75 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 222 47% 11%;
+    --background: 210 25% 98%;
+    --foreground: 220 40% 13%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card-foreground: 220 40% 13%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 220 40% 13%;
 
-    /* Trust & Quality colors - Emerald/Teal palette */
-    --primary: 160 84% 39%;
+    /* Trust & Quality colors - Deep Blue/Indigo palette */
+    --primary: 221 83% 53%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 20% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 214 32% 96%;
+    --secondary-foreground: 220 40% 13%;
 
-    --muted: 210 20% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 214 32% 96%;
+    --muted-foreground: 220 13% 46%;
 
-    --accent: 168 76% 42%;
+    --accent: 199 89% 48%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 160 84% 39%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 221 83% 53%;
 
     --radius: 0.875rem;
 
     /* Chart colors for light mode */
-    --chart-1: 160 84% 39%;
-    --chart-2: 168 76% 42%;
-    --chart-3: 199 89% 48%;
+    --chart-1: 221 83% 53%;
+    --chart-2: 199 89% 48%;
+    --chart-3: 168 76% 42%;
     --chart-4: 43 74% 56%;
     --chart-5: 12 76% 61%;
 
     /* Custom brand colors */
-    --emerald: 160 84% 39%;
-    --teal: 168 76% 42%;
-    --cyan: 188 78% 41%;
-    --navy-deep: 222 47% 8%;
+    --blue-primary: 221 83% 53%;
+    --blue-deep: 224 71% 35%;
+    --cyan: 199 89% 48%;
+    --indigo: 234 89% 63%;
+    --navy-deep: 220 40% 8%;
     --glass: 0 0% 100%;
-    --glass-border: 220 13% 91%;
+    --glass-border: 214 32% 91%;
     --success: 142 71% 45%;
     --warning: 38 92% 50%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(160 84% 39%) 0%, hsl(168 76% 42%) 50%, hsl(188 78% 41%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(210 20% 99%) 0%, hsl(210 20% 96%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(221 83% 53%) 0%, hsl(234 89% 63%) 50%, hsl(199 89% 48%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(210 25% 99%) 0%, hsl(214 32% 96%) 100%);
     --gradient-glass: linear-gradient(135deg, hsl(0 0% 100% / 0.95) 0%, hsl(0 0% 100% / 0.8) 100%);
-    --gradient-hero: radial-gradient(ellipse at 50% 0%, hsl(160 84% 39% / 0.12) 0%, transparent 50%);
+    --gradient-hero: radial-gradient(ellipse at 50% 0%, hsl(221 83% 53% / 0.12) 0%, transparent 50%);
 
     /* Premium shadows */
-    --shadow-glow: 0 0 60px hsl(160 84% 39% / 0.18);
-    --shadow-card: 0 4px 32px hsl(222 47% 11% / 0.06);
-    --shadow-button: 0 4px 20px hsl(160 84% 39% / 0.25);
-    --shadow-elevated: 0 12px 40px hsl(222 47% 11% / 0.1);
+    --shadow-glow: 0 0 60px hsl(221 83% 53% / 0.2);
+    --shadow-card: 0 4px 32px hsl(220 40% 13% / 0.06);
+    --shadow-button: 0 4px 20px hsl(221 83% 53% / 0.3);
+    --shadow-elevated: 0 12px 40px hsl(220 40% 13% / 0.1);
 
     --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 160 84% 39%;
+    --sidebar-foreground: 220 40% 13%;
+    --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 20% 96%;
-    --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 160 84% 39%;
+    --sidebar-accent: 214 32% 96%;
+    --sidebar-accent-foreground: 220 40% 13%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 221 83% 53%;
   }
 
   .dark {
@@ -86,9 +87,9 @@
     --popover: 222 47% 7%;
     --popover-foreground: 210 40% 98%;
 
-    /* Trust & Quality colors - Emerald/Teal palette */
-    --primary: 160 84% 45%;
-    --primary-foreground: 222 47% 5%;
+    /* Trust & Quality colors - Deep Blue/Indigo palette */
+    --primary: 217 91% 60%;
+    --primary-foreground: 220 40% 5%;
 
     --secondary: 222 47% 11%;
     --secondary-foreground: 210 40% 98%;
@@ -96,27 +97,28 @@
     --muted: 222 47% 12%;
     --muted-foreground: 215 20% 55%;
 
-    --accent: 168 76% 48%;
-    --accent-foreground: 222 47% 5%;
+    --accent: 199 89% 55%;
+    --accent-foreground: 220 40% 5%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 210 40% 98%;
 
     --border: 222 47% 14%;
     --input: 222 47% 14%;
-    --ring: 160 84% 45%;
+    --ring: 217 91% 60%;
 
     /* Chart colors for dark mode */
-    --chart-1: 160 84% 45%;
-    --chart-2: 168 76% 48%;
-    --chart-3: 199 89% 55%;
+    --chart-1: 217 91% 60%;
+    --chart-2: 199 89% 55%;
+    --chart-3: 168 76% 48%;
     --chart-4: 43 74% 56%;
     --chart-5: 12 76% 61%;
 
     /* Custom brand colors */
-    --emerald: 160 84% 45%;
-    --teal: 168 76% 48%;
-    --cyan: 188 78% 48%;
+    --blue-primary: 217 91% 60%;
+    --blue-deep: 224 71% 45%;
+    --cyan: 199 89% 55%;
+    --indigo: 234 89% 68%;
     --navy-deep: 222 47% 3%;
     --glass: 222 47% 9%;
     --glass-border: 222 47% 18%;
@@ -124,25 +126,25 @@
     --warning: 38 92% 50%;
 
     /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(160 84% 45%) 0%, hsl(168 76% 48%) 50%, hsl(188 78% 48%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(234 89% 68%) 50%, hsl(199 89% 55%) 100%);
     --gradient-subtle: linear-gradient(180deg, hsl(222 47% 7%) 0%, hsl(222 47% 5%) 100%);
     --gradient-glass: linear-gradient(135deg, hsl(222 47% 10% / 0.7) 0%, hsl(222 47% 7% / 0.5) 100%);
-    --gradient-hero: radial-gradient(ellipse at 50% 0%, hsl(160 84% 45% / 0.18) 0%, transparent 50%);
+    --gradient-hero: radial-gradient(ellipse at 50% 0%, hsl(217 91% 60% / 0.18) 0%, transparent 50%);
 
     /* Premium shadows */
-    --shadow-glow: 0 0 80px hsl(160 84% 45% / 0.35);
+    --shadow-glow: 0 0 80px hsl(217 91% 60% / 0.35);
     --shadow-card: 0 4px 32px hsl(0 0% 0% / 0.4);
-    --shadow-button: 0 4px 20px hsl(160 84% 45% / 0.35);
+    --shadow-button: 0 4px 20px hsl(217 91% 60% / 0.35);
     --shadow-elevated: 0 12px 40px hsl(0 0% 0% / 0.3);
 
     --sidebar-background: 222 47% 5%;
     --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 160 84% 45%;
-    --sidebar-primary-foreground: 222 47% 5%;
+    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary-foreground: 220 40% 5%;
     --sidebar-accent: 222 47% 11%;
     --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 222 47% 14%;
-    --sidebar-ring: 160 84% 45%;
+    --sidebar-ring: 217 91% 60%;
   }
 }
 
@@ -215,6 +217,22 @@
     background: linear-gradient(135deg, hsl(var(--primary) / 0.05) 0%, transparent 60%);
     pointer-events: none;
   }
+
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+
+  .shadow-card {
+    box-shadow: var(--shadow-card);
+  }
+
+  .shadow-button {
+    box-shadow: var(--shadow-button);
+  }
+
+  .shadow-elevated {
+    box-shadow: var(--shadow-elevated);
+  }
 }
 
 @layer utilities {
@@ -238,6 +256,22 @@
     animation: shimmer 2s linear infinite;
     background: linear-gradient(90deg, transparent, hsl(var(--primary) / 0.1), transparent);
     background-size: 200% 100%;
+  }
+
+  .bg-success {
+    background-color: hsl(var(--success));
+  }
+
+  .text-success {
+    color: hsl(var(--success));
+  }
+
+  .bg-warning {
+    background-color: hsl(var(--warning));
+  }
+
+  .text-warning {
+    color: hsl(var(--warning));
   }
 }
 
