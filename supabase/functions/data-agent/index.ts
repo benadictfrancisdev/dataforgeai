@@ -154,8 +154,71 @@ serve(async (req) => {
 
     console.log(`[DataAgent] Authenticated user: ${user.id}`);
 
-    // Parse and validate request body
+    // Parse request body first to get action for rate limiting
     const body = await req.json();
+    const action = body?.action || 'unknown';
+
+    // Rate limiting configuration per action type
+    const RATE_LIMITS: Record<string, { maxRequests: number; windowMinutes: number }> = {
+      'analyze': { maxRequests: 20, windowMinutes: 60 },
+      'clean': { maxRequests: 30, windowMinutes: 60 },
+      'validate': { maxRequests: 50, windowMinutes: 60 },
+      'generate-report': { maxRequests: 10, windowMinutes: 60 },
+      'visualization-chat': { maxRequests: 50, windowMinutes: 60 },
+      'nlp-query': { maxRequests: 50, windowMinutes: 60 },
+      'chat': { maxRequests: 100, windowMinutes: 60 },
+      'generate-visualization-report': { maxRequests: 10, windowMinutes: 60 },
+    };
+
+    const rateLimit = RATE_LIMITS[action] || { maxRequests: 30, windowMinutes: 60 };
+
+    // Create service role client for rate limiting (bypasses RLS)
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseServiceKey) {
+      console.error('[DataAgent] Missing service role key for rate limiting');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Check rate limit using database function
+    const { data: rateLimitOk, error: rateLimitError } = await supabaseAdmin.rpc(
+      'check_rate_limit',
+      {
+        p_user_id: user.id,
+        p_endpoint: `data-agent:${action}`,
+        p_max_requests: rateLimit.maxRequests,
+        p_window_minutes: rateLimit.windowMinutes
+      }
+    );
+
+    if (rateLimitError) {
+      console.error('[DataAgent] Rate limit check error:', rateLimitError.message);
+      // Continue without rate limiting if check fails
+    } else if (rateLimitOk === false) {
+      console.warn(`[DataAgent] Rate limit exceeded for user ${user.id} on action ${action}`);
+      return new Response(
+        JSON.stringify({ 
+          error: `Rate limit exceeded. You can make ${rateLimit.maxRequests} ${action} requests per hour. Please try again later.`,
+          retryAfter: rateLimit.windowMinutes * 60
+        }),
+        { 
+          status: 429, 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json',
+            'Retry-After': String(rateLimit.windowMinutes * 60)
+          } 
+        }
+      );
+    }
+
+    console.log(`[DataAgent] Rate limit check passed for user ${user.id} on action ${action}`);
+
+    // Validate request body
     const validation = validateInput(body);
     
     if (!validation.valid) {
@@ -166,7 +229,7 @@ serve(async (req) => {
       );
     }
 
-    const { action, data, datasetName, question, conversationHistory, projectDetails, 
+    const { data, datasetName, question, conversationHistory, projectDetails, 
             projectGoals, projectStatus, columns, columnTypes, dataSummary, query, dataContext } = validation.sanitized;
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
