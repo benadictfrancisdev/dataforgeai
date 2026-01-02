@@ -27,9 +27,11 @@ import {
   RefreshCw,
   Palette,
   Layers,
-  Zap
+  Zap,
+  FileDown
 } from "lucide-react";
 import { toast } from "sonner";
+import { usePdfExport } from "@/hooks/usePdfExport";
 import {
   BarChart,
   Bar,
@@ -92,11 +94,48 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
   const [theme, setTheme] = useState<"light" | "dark" | "colorful">("colorful");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedTile, setSelectedTile] = useState<string | null>(null);
+  const { exportToPdf } = usePdfExport();
 
   const numericColumns = useMemo(() => 
     columns.filter(c => columnTypes[c] === "numeric"), [columns, columnTypes]);
   const categoricalColumns = useMemo(() => 
     columns.filter(c => columnTypes[c] === "categorical"), [columns, columnTypes]);
+
+  const handleExportPdf = () => {
+    exportToPdf({
+      title: "Power BI Style Dashboard Report",
+      subtitle: `Interactive Dashboard for ${datasetName}`,
+      datasetName,
+      statistics: {
+        "Total Records": data.length,
+        "Dashboard Tiles": tiles.length,
+        "Numeric Columns": numericColumns.length,
+        "Categorical Columns": categoricalColumns.length,
+      },
+      insights: tiles.filter(t => t.type === "kpi").map(t => ({
+        title: t.title,
+        description: `Value: ${t.value?.toFixed(2) || "N/A"}, Change: ${t.change?.toFixed(1) || 0}%`,
+        importance: (t.change || 0) > 0 ? "high" : "medium" as const
+      })),
+      sections: [
+        {
+          title: "Dashboard Overview",
+          content: `This Power BI-style dashboard contains ${tiles.length} visualization tiles across ${numericColumns.length} numeric metrics.`,
+          type: "text"
+        },
+        {
+          title: "Visualizations",
+          type: "list",
+          content: tiles.map(t => `${t.type.toUpperCase()}: ${t.title}`)
+        }
+      ],
+      recommendations: [
+        "Use slicers to filter data dynamically",
+        "Drill down into charts for detailed insights",
+        "Share this dashboard with stakeholders"
+      ]
+    });
+  };
 
   // Generate Power BI style dashboard
   const generateDashboard = useCallback(() => {
@@ -427,6 +466,17 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
             </div>
             
             <div className="flex items-center gap-2">
+              {tiles.length > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportPdf}
+                  className="gap-2"
+                >
+                  <FileDown className="h-4 w-4" />
+                  Export PDF
+                </Button>
+              )}
               <Button
                 variant="outline"
                 size="sm"

@@ -40,6 +40,7 @@ import BusinessAnalyticsReport from "./charts/BusinessAnalyticsReport";
 import CustomChartBuilder from "./charts/CustomChartBuilder";
 import VisualizationAIChat from "./charts/VisualizationAIChat";
 import VisualizationReportGenerator from "./charts/VisualizationReportGenerator";
+import { usePdfExport } from "@/hooks/usePdfExport";
 import type { DatasetState } from "@/pages/DataAgent";
 
 interface VisualizationDashboardProps {
@@ -51,6 +52,7 @@ type ChartType = "bar" | "line" | "pie" | "area" | "scatter";
 const VisualizationDashboard = ({ dataset }: VisualizationDashboardProps) => {
   const data = dataset.cleanedData || dataset.rawData;
   const columns = dataset.columns;
+  const { exportToPdf } = usePdfExport();
 
   const [selectedXAxis, setSelectedXAxis] = useState(columns[0] || "");
   const [selectedYAxis, setSelectedYAxis] = useState(columns[1] || "");
@@ -257,8 +259,62 @@ const VisualizationDashboard = ({ dataset }: VisualizationDashboardProps) => {
     }
   };
 
+  const handleExportPdf = () => {
+    exportToPdf({
+      title: "Data Visualization Report",
+      subtitle: `Generated from ${dataset.name}`,
+      datasetName: dataset.name,
+      statistics: {
+        "Total Records": data.length,
+        "Data Fields": columns.length,
+        "Numeric Metrics": numericColumns.length,
+        "Categories": categoricalColumns.length,
+      },
+      insights: kpis.map(kpi => ({
+        title: kpi.column,
+        description: `Average: ${kpi.avg.toFixed(2)}, Trend: ${kpi.trend} (${kpi.trendChange.toFixed(1)}% change)`,
+        importance: kpi.trend !== "stable" ? "high" : "medium"
+      })),
+      sections: [
+        {
+          title: "Data Overview",
+          content: `This report contains analysis of ${data.length} records across ${columns.length} columns. The dataset includes ${numericColumns.length} numeric metrics and ${categoricalColumns.length} categorical fields.`,
+          type: "text"
+        },
+        {
+          title: "Column Statistics",
+          type: "table",
+          content: "",
+          tableData: {
+            headers: ["Column", "Average", "Min", "Max", "Trend"],
+            rows: kpis.map(kpi => [
+              kpi.column,
+              kpi.avg.toFixed(2),
+              kpi.min.toFixed(2),
+              kpi.max.toFixed(2),
+              `${kpi.trend} (${kpi.trendChange.toFixed(1)}%)`
+            ])
+          }
+        }
+      ],
+      recommendations: [
+        "Review columns with significant trends for business opportunities",
+        "Monitor outliers in numeric metrics for data quality",
+        "Consider segmentation analysis for categorical fields"
+      ]
+    });
+  };
+
   return (
     <div className="space-y-6">
+      {/* Export Button */}
+      <div className="flex justify-end">
+        <Button onClick={handleExportPdf} variant="outline" className="gap-2">
+          <Download className="h-4 w-4" />
+          Export PDF
+        </Button>
+      </div>
+
       {/* Enhanced KPI Cards with Confidence */}
       {kpis.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

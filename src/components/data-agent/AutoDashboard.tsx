@@ -21,9 +21,11 @@ import {
   Monitor,
   Tablet,
   Download,
-  Eye
+  Eye,
+  FileDown
 } from "lucide-react";
 import { toast } from "sonner";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 interface DashboardSuggestion {
   id: string;
@@ -49,9 +51,47 @@ const AutoDashboard = ({ data, columns, columnTypes, datasetName, onDashboardCre
   const [suggestions, setSuggestions] = useState<DashboardSuggestion[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const { exportToPdf } = usePdfExport();
 
   const numericColumns = columns.filter(c => columnTypes[c] === "numeric");
   const categoricalColumns = columns.filter(c => columnTypes[c] === "categorical");
+
+  const handleExportPdf = () => {
+    const selectedCharts = suggestions.filter(s => s.selected);
+    exportToPdf({
+      title: "Auto Dashboard Report",
+      subtitle: `AI-Generated Dashboard for ${datasetName}`,
+      datasetName,
+      statistics: {
+        "Total Records": data.length,
+        "Selected Charts": selectedCharts.length,
+        "Numeric Columns": numericColumns.length,
+        "Categorical Columns": categoricalColumns.length,
+      },
+      insights: selectedCharts.map(chart => ({
+        title: chart.title,
+        description: chart.reason,
+        importance: chart.priority
+      })),
+      sections: [
+        {
+          title: "Dashboard Configuration",
+          content: `This dashboard contains ${selectedCharts.length} visualizations selected from ${suggestions.length} AI-generated suggestions.`,
+          type: "text"
+        },
+        {
+          title: "Selected Visualizations",
+          type: "list",
+          content: selectedCharts.map(c => `${c.type.toUpperCase()}: ${c.title} - ${c.description}`)
+        }
+      ],
+      recommendations: [
+        "Customize chart colors to match your brand",
+        "Add filters for interactive data exploration",
+        "Consider adding drill-down capabilities for detailed analysis"
+      ]
+    });
+  };
 
   // Generate AI-powered dashboard suggestions
   const generateSuggestions = () => {
@@ -349,14 +389,25 @@ const AutoDashboard = ({ data, columns, columnTypes, datasetName, onDashboardCre
                   </Button>
                 </div>
 
-                <Button
-                  onClick={createDashboard}
-                  disabled={selectedCount === 0}
-                  className="bg-gradient-to-r from-green-500 to-emerald-500"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Dashboard ({selectedCount})
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={handleExportPdf}
+                    disabled={selectedCount === 0}
+                    className="gap-2"
+                  >
+                    <FileDown className="h-4 w-4" />
+                    Export PDF
+                  </Button>
+                  <Button
+                    onClick={createDashboard}
+                    disabled={selectedCount === 0}
+                    className="bg-gradient-to-r from-green-500 to-emerald-500"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Dashboard ({selectedCount})
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
