@@ -129,8 +129,9 @@ serve(async (req) => {
     // Create authenticated Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
-    if (!supabaseUrl || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
       console.error('[DataAgent] Missing Supabase configuration');
       return new Response(
         JSON.stringify({ error: 'Server configuration error' }),
@@ -138,14 +139,16 @@ serve(async (req) => {
       );
     }
 
-    const supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } }
-    });
-
-    // Verify user is authenticated
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
+    // Use service role client to verify the JWT token
+    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
+    
+    // Extract the token from the header
+    const token = authHeader.replace('Bearer ', '');
+    
+    // Verify user using the token
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !user) {
-      console.error('[DataAgent] Authentication failed:', authError?.message);
+      console.error('[DataAgent] Authentication failed:', authError?.message || 'No user found');
       return new Response(
         JSON.stringify({ error: 'Unauthorized. Please log in to continue.' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -171,18 +174,6 @@ serve(async (req) => {
     };
 
     const rateLimit = RATE_LIMITS[action] || { maxRequests: 30, windowMinutes: 60 };
-
-    // Create service role client for rate limiting (bypasses RLS)
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-    if (!supabaseServiceKey) {
-      console.error('[DataAgent] Missing service role key for rate limiting');
-      return new Response(
-        JSON.stringify({ error: 'Server configuration error' }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // Check rate limit using database function
     const { data: rateLimitOk, error: rateLimitError } = await supabaseAdmin.rpc(
