@@ -1,6 +1,11 @@
-import { Database, Github, Twitter, Linkedin } from "lucide-react";
+import { Database, Github, Twitter, Linkedin, Heart } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import DonateModal from "./DonateModal";
 
 const Footer = () => {
+  const [donateOpen, setDonateOpen] = useState(false);
+
   return (
     <footer className="py-16 border-t border-border/50 bg-card/30">
       <div className="container mx-auto px-6">
@@ -60,6 +65,15 @@ const Footer = () => {
             © 2024 AIDataForge. All rights reserved.
           </p>
           <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 border-pink-500/30 text-pink-500 hover:bg-pink-500/10 hover:text-pink-400"
+              onClick={() => setDonateOpen(true)}
+            >
+              <Heart className="w-4 h-4" />
+              Support Us
+            </Button>
             <a href="#" className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors">
               <Twitter className="w-5 h-5" />
             </a>
@@ -72,6 +86,8 @@ const Footer = () => {
           </div>
         </div>
       </div>
+
+      <DonateModal open={donateOpen} onOpenChange={setDonateOpen} />
     </footer>
   );
 };
