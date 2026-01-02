@@ -130,9 +130,9 @@ const DataAgent = () => {
 
           {/* Main Content */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            {/* Mobile: Horizontal scrollable tabs */}
-            <div className="overflow-x-auto pb-2 mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
-              <TabsList className="inline-flex sm:flex sm:flex-wrap sm:justify-center gap-1.5 sm:gap-2 bg-card/80 backdrop-blur-sm p-2 rounded-2xl border border-border shadow-card min-w-max sm:min-w-0 sm:w-full">
+            {/* Fixed two-row grid layout */}
+            <div className="mb-8">
+              <TabsList className="w-full h-auto bg-card/80 backdrop-blur-sm p-3 rounded-2xl border border-border shadow-card grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-2">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
                   const isDisabled = tab.requiresData && !dataset;
@@ -141,12 +141,12 @@ const DataAgent = () => {
                       key={tab.value}
                       value={tab.value} 
                       disabled={isDisabled}
-                      className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl transition-all whitespace-nowrap text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-button ${
+                      className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 sm:px-3 py-2.5 sm:py-2 rounded-xl transition-all text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-button h-auto ${
                         isDisabled ? 'opacity-50' : ''
                       }`}
                     >
                       <Icon className="w-4 h-4 shrink-0" />
-                      <span className="font-medium">{tab.label}</span>
+                      <span className="font-medium text-center leading-tight">{tab.label}</span>
                     </TabsTrigger>
                   );
                 })}
