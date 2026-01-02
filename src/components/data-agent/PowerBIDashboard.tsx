@@ -5,6 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   LayoutDashboard,
   Sparkles,
@@ -28,7 +32,13 @@ import {
   Palette,
   Layers,
   Zap,
-  FileDown
+  FileDown,
+  Edit3,
+  Wand2,
+  CheckCircle2,
+  X,
+  Settings2,
+  Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePdfExport } from "@/hooks/usePdfExport";
@@ -74,6 +84,16 @@ interface DashboardTile {
   color?: string;
 }
 
+interface DataTransformation {
+  id: string;
+  type: "filter" | "sort" | "aggregate" | "rename" | "remove_nulls" | "normalize";
+  column?: string;
+  operator?: string;
+  value?: string | number;
+  direction?: "asc" | "desc";
+  newName?: string;
+}
+
 const POWER_BI_COLORS = [
   "#01B8AA", // Teal
   "#374649", // Dark Gray
@@ -94,6 +114,11 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
   const [theme, setTheme] = useState<"light" | "dark" | "colorful">("colorful");
   const [showFilters, setShowFilters] = useState(false);
   const [selectedTile, setSelectedTile] = useState<string | null>(null);
+  const [showDataEditor, setShowDataEditor] = useState(false);
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(columns);
+  const [transformations, setTransformations] = useState<DataTransformation[]>([]);
+  const [processedData, setProcessedData] = useState<Record<string, unknown>[]>(data);
+  const [isProcessing, setIsProcessing] = useState(false);
   const { exportToPdf } = usePdfExport();
 
   const numericColumns = useMemo(() => 
@@ -137,16 +162,155 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
     });
   };
 
+  // Data editing functions
+  const toggleColumnSelection = (column: string) => {
+    setSelectedColumns(prev => 
+      prev.includes(column) 
+        ? prev.filter(c => c !== column)
+        : [...prev, column]
+    );
+  };
+
+  const addTransformation = (type: DataTransformation["type"]) => {
+    const newTransform: DataTransformation = {
+      id: `transform-${Date.now()}`,
+      type,
+      column: selectedColumns[0] || columns[0]
+    };
+    setTransformations(prev => [...prev, newTransform]);
+  };
+
+  const updateTransformation = (id: string, updates: Partial<DataTransformation>) => {
+    setTransformations(prev => 
+      prev.map(t => t.id === id ? { ...t, ...updates } : t)
+    );
+  };
+
+  const removeTransformation = (id: string) => {
+    setTransformations(prev => prev.filter(t => t.id !== id));
+  };
+
+  const applyTransformations = useCallback(() => {
+    setIsProcessing(true);
+    
+    setTimeout(() => {
+      let result = [...data];
+      
+      // Filter to selected columns only
+      result = result.map(row => {
+        const newRow: Record<string, unknown> = {};
+        selectedColumns.forEach(col => {
+          newRow[col] = row[col];
+        });
+        return newRow;
+      });
+      
+      // Apply each transformation
+      transformations.forEach(transform => {
+        switch (transform.type) {
+          case "filter":
+            if (transform.column && transform.operator && transform.value !== undefined) {
+              result = result.filter(row => {
+                const val = row[transform.column!];
+                const compareVal = transform.value;
+                switch (transform.operator) {
+                  case "equals": return String(val) === String(compareVal);
+                  case "contains": return String(val).toLowerCase().includes(String(compareVal).toLowerCase());
+                  case "greater": return Number(val) > Number(compareVal);
+                  case "less": return Number(val) < Number(compareVal);
+                  case "not_empty": return val !== null && val !== undefined && val !== "";
+                  default: return true;
+                }
+              });
+            }
+            break;
+          case "sort":
+            if (transform.column) {
+              result.sort((a, b) => {
+                const aVal = a[transform.column!];
+                const bVal = b[transform.column!];
+                const comparison = String(aVal).localeCompare(String(bVal), undefined, { numeric: true });
+                return transform.direction === "desc" ? -comparison : comparison;
+              });
+            }
+            break;
+          case "remove_nulls":
+            if (transform.column) {
+              result = result.filter(row => 
+                row[transform.column!] !== null && 
+                row[transform.column!] !== undefined && 
+                row[transform.column!] !== ""
+              );
+            }
+            break;
+          case "normalize":
+            if (transform.column && columnTypes[transform.column] === "numeric") {
+              const values = result.map(r => Number(r[transform.column!])).filter(v => !isNaN(v));
+              const min = Math.min(...values);
+              const max = Math.max(...values);
+              const range = max - min || 1;
+              result = result.map(row => ({
+                ...row,
+                [transform.column!]: ((Number(row[transform.column!]) - min) / range).toFixed(4)
+              }));
+            }
+            break;
+        }
+      });
+      
+      setProcessedData(result);
+      setIsProcessing(false);
+      toast.success(`Applied ${transformations.length} transformations to ${result.length} rows`);
+    }, 1000);
+  }, [data, selectedColumns, transformations, columnTypes]);
+
+  const autoCleanData = () => {
+    setIsProcessing(true);
+    
+    setTimeout(() => {
+      // Auto-clean: remove nulls, trim whitespace, normalize numeric columns
+      let result = data.map(row => {
+        const newRow: Record<string, unknown> = {};
+        selectedColumns.forEach(col => {
+          let val = row[col];
+          // Trim strings
+          if (typeof val === "string") {
+            val = val.trim();
+          }
+          // Convert empty strings to null for consistency
+          if (val === "") {
+            val = null;
+          }
+          newRow[col] = val;
+        });
+        return newRow;
+      });
+      
+      // Remove rows where all selected columns are null
+      result = result.filter(row => 
+        selectedColumns.some(col => row[col] !== null && row[col] !== undefined)
+      );
+      
+      setProcessedData(result);
+      setIsProcessing(false);
+      toast.success(`Auto-cleaned data: ${result.length} rows after removing empty rows`);
+    }, 1500);
+  };
+
   // Generate Power BI style dashboard
   const generateDashboard = useCallback(() => {
     setIsGenerating(true);
+    const dataToUse = processedData.length > 0 ? processedData : data;
+    const activeColumns = selectedColumns.length > 0 ? selectedColumns : columns;
+    const activeNumericCols = activeColumns.filter(c => columnTypes[c] === "numeric");
+    const activeCategoricalCols = activeColumns.filter(c => columnTypes[c] === "categorical");
     
     setTimeout(() => {
       const newTiles: DashboardTile[] = [];
 
       // Generate KPI tiles for top numeric columns
-      numericColumns.slice(0, 4).forEach((col, i) => {
-        const values = data.map(row => Number(row[col])).filter(v => !isNaN(v));
+      activeNumericCols.slice(0, 4).forEach((col, i) => {
+        const values = dataToUse.map(row => Number(row[col])).filter(v => !isNaN(v));
         const sum = values.reduce((a, b) => a + b, 0);
         const avg = values.length > 0 ? sum / values.length : 0;
         const prevAvg = values.length > 1 ? 
@@ -166,10 +330,10 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       });
 
       // Bar chart for categorical vs numeric
-      if (categoricalColumns.length > 0 && numericColumns.length > 0) {
-        const catCol = categoricalColumns[0];
-        const numCol = numericColumns[0];
-        const grouped = data.reduce((acc: Record<string, number[]>, row) => {
+      if (activeCategoricalCols.length > 0 && activeNumericCols.length > 0) {
+        const catCol = activeCategoricalCols[0];
+        const numCol = activeNumericCols[0];
+        const grouped = dataToUse.reduce((acc: Record<string, number[]>, row) => {
           const key = String(row[catCol]);
           if (!acc[key]) acc[key] = [];
           const val = Number(row[numCol]);
@@ -195,9 +359,9 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Pie chart for distribution
-      if (categoricalColumns.length > 0) {
-        const catCol = categoricalColumns[0];
-        const counts = data.reduce((acc: Record<string, number>, row) => {
+      if (activeCategoricalCols.length > 0) {
+        const catCol = activeCategoricalCols[0];
+        const counts = dataToUse.reduce((acc: Record<string, number>, row) => {
           const key = String(row[catCol]);
           acc[key] = (acc[key] || 0) + 1;
           return acc;
@@ -219,9 +383,9 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Line/Trend chart
-      if (numericColumns.length > 0) {
-        const col = numericColumns[0];
-        const chartData = data.slice(0, 50).map((row, i) => ({
+      if (activeNumericCols.length > 0) {
+        const col = activeNumericCols[0];
+        const chartData = dataToUse.slice(0, 50).map((row, i) => ({
           index: i + 1,
           value: Number(row[col]) || 0
         }));
@@ -238,9 +402,9 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Area chart
-      if (numericColumns.length > 1) {
-        const col = numericColumns[1];
-        const chartData = data.slice(0, 50).map((row, i) => ({
+      if (activeNumericCols.length > 1) {
+        const col = activeNumericCols[1];
+        const chartData = dataToUse.slice(0, 50).map((row, i) => ({
           index: i + 1,
           value: Number(row[col]) || 0
         }));
@@ -257,12 +421,12 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Combo chart if enough data
-      if (numericColumns.length >= 2 && categoricalColumns.length > 0) {
-        const catCol = categoricalColumns[0];
-        const num1 = numericColumns[0];
-        const num2 = numericColumns[1];
+      if (activeNumericCols.length >= 2 && activeCategoricalCols.length > 0) {
+        const catCol = activeCategoricalCols[0];
+        const num1 = activeNumericCols[0];
+        const num2 = activeNumericCols[1];
 
-        const grouped = data.reduce((acc: Record<string, { v1: number[], v2: number[] }>, row) => {
+        const grouped = dataToUse.reduce((acc: Record<string, { v1: number[], v2: number[] }>, row) => {
           const key = String(row[catCol]);
           if (!acc[key]) acc[key] = { v1: [], v2: [] };
           const val1 = Number(row[num1]);
@@ -291,9 +455,9 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
 
       setTiles(newTiles);
       setIsGenerating(false);
-      toast.success(`Generated ${newTiles.length} dashboard tiles`);
+      toast.success(`Generated ${newTiles.length} dashboard tiles using ${dataToUse.length} rows`);
     }, 2000);
-  }, [data, numericColumns, categoricalColumns]);
+  }, [data, processedData, selectedColumns, columns, columnTypes]);
 
   const renderTile = (tile: DashboardTile) => {
     const sizeClasses = {
@@ -465,7 +629,16 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
               </div>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant={showDataEditor ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowDataEditor(!showDataEditor)}
+                className={showDataEditor ? "bg-gradient-to-r from-purple-500 to-pink-600" : ""}
+              >
+                <Edit3 className="h-4 w-4 mr-2" />
+                Edit Data
+              </Button>
               {tiles.length > 0 && (
                 <Button
                   variant="outline"
@@ -545,6 +718,221 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
           </CardContent>
         </Card>
       </div>
+
+      {/* Data Editor Panel */}
+      {showDataEditor && (
+        <Card className="bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-transparent border-purple-500/30">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600">
+                  <Edit3 className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Data Editor</CardTitle>
+                  <CardDescription>Select columns and apply transformations</CardDescription>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setShowDataEditor(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Column Selection */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-purple-500" />
+                  Select Columns
+                </Label>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setSelectedColumns(columns)}
+                  >
+                    Select All
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => setSelectedColumns([])}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                {columns.map(col => (
+                  <div
+                    key={col}
+                    onClick={() => toggleColumnSelection(col)}
+                    className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
+                      selectedColumns.includes(col)
+                        ? "border-purple-500 bg-purple-500/10"
+                        : "border-border hover:border-purple-500/50"
+                    }`}
+                  >
+                    <Checkbox 
+                      checked={selectedColumns.includes(col)}
+                      onCheckedChange={() => toggleColumnSelection(col)}
+                    />
+                    <span className="text-xs truncate">{col}</span>
+                    <Badge variant="outline" className="text-[10px] ml-auto">
+                      {columnTypes[col]?.slice(0, 3) || "str"}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {selectedColumns.length} of {columns.length} columns selected
+              </p>
+            </div>
+
+            {/* Transformations */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Settings2 className="h-4 w-4 text-purple-500" />
+                Data Transformations
+              </Label>
+              
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => addTransformation("filter")}>
+                  <Filter className="h-3 w-3 mr-1" />
+                  Filter
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => addTransformation("sort")}>
+                  <SlidersHorizontal className="h-3 w-3 mr-1" />
+                  Sort
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => addTransformation("remove_nulls")}>
+                  <Trash2 className="h-3 w-3 mr-1" />
+                  Remove Nulls
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => addTransformation("normalize")}>
+                  <Activity className="h-3 w-3 mr-1" />
+                  Normalize
+                </Button>
+              </div>
+
+              {/* Transformation List */}
+              {transformations.length > 0 && (
+                <div className="space-y-2 mt-4">
+                  {transformations.map((transform, idx) => (
+                    <div key={transform.id} className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 flex-wrap">
+                      <Badge variant="secondary" className="text-xs">
+                        {idx + 1}. {transform.type}
+                      </Badge>
+                      
+                      <Select
+                        value={transform.column}
+                        onValueChange={(val) => updateTransformation(transform.id, { column: val })}
+                      >
+                        <SelectTrigger className="w-32 h-8">
+                          <SelectValue placeholder="Column" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {selectedColumns.map(col => (
+                            <SelectItem key={col} value={col}>{col}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {transform.type === "filter" && (
+                        <>
+                          <Select
+                            value={transform.operator}
+                            onValueChange={(val) => updateTransformation(transform.id, { operator: val })}
+                          >
+                            <SelectTrigger className="w-28 h-8">
+                              <SelectValue placeholder="Operator" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="equals">Equals</SelectItem>
+                              <SelectItem value="contains">Contains</SelectItem>
+                              <SelectItem value="greater">Greater than</SelectItem>
+                              <SelectItem value="less">Less than</SelectItem>
+                              <SelectItem value="not_empty">Not empty</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {transform.operator !== "not_empty" && (
+                            <Input
+                              className="w-24 h-8"
+                              placeholder="Value"
+                              value={transform.value?.toString() || ""}
+                              onChange={(e) => updateTransformation(transform.id, { value: e.target.value })}
+                            />
+                          )}
+                        </>
+                      )}
+
+                      {transform.type === "sort" && (
+                        <Select
+                          value={transform.direction || "asc"}
+                          onValueChange={(val) => updateTransformation(transform.id, { direction: val as "asc" | "desc" })}
+                        >
+                          <SelectTrigger className="w-32 h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="asc">Ascending</SelectItem>
+                            <SelectItem value="desc">Descending</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 ml-auto"
+                        onClick={() => removeTransformation(transform.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-wrap gap-3 pt-4 border-t">
+              <Button
+                onClick={autoCleanData}
+                disabled={isProcessing}
+                variant="outline"
+                className="gap-2"
+              >
+                <Wand2 className="h-4 w-4" />
+                Auto Clean
+              </Button>
+              <Button
+                onClick={applyTransformations}
+                disabled={isProcessing || selectedColumns.length === 0}
+                className="bg-gradient-to-r from-purple-500 to-pink-600 gap-2"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="h-4 w-4" />
+                    Apply Changes
+                  </>
+                )}
+              </Button>
+              <div className="ml-auto flex items-center gap-2 text-sm text-muted-foreground">
+                <span>Original: {data.length} rows</span>
+                <span>•</span>
+                <span className="text-purple-500 font-medium">Processed: {processedData.length} rows</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Dashboard Grid */}
       {tiles.length === 0 && !isGenerating && (
