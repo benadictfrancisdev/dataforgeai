@@ -23,10 +23,12 @@ import {
   Minus,
   RefreshCw,
   Download,
-  Loader2
+  Loader2,
+  FileDown
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { usePdfExport } from "@/hooks/usePdfExport";
 
 interface PredictiveAnalyticsProps {
   data: Record<string, unknown>[];
@@ -69,8 +71,62 @@ const PredictiveAnalytics = ({ data, columns, columnTypes, datasetName }: Predic
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
   const [patterns, setPatterns] = useState<PatternInsight[]>([]);
   const [analysisComplete, setAnalysisComplete] = useState(false);
+  const { exportToPdf } = usePdfExport();
 
   const numericColumns = columns.filter(c => columnTypes[c] === "numeric");
+
+  const handleExportPdf = () => {
+    exportToPdf({
+      title: "Predictive Analytics Report",
+      subtitle: `AI-Powered Analysis for ${datasetName}`,
+      datasetName,
+      statistics: {
+        "Anomalies Detected": anomalies.length,
+        "Forecasts Generated": forecasts.length,
+        "Patterns Found": patterns.length,
+        "Numeric Columns": numericColumns.length,
+      },
+      insights: [
+        ...anomalies.slice(0, 5).map(a => ({
+          title: `Anomaly in ${a.column}`,
+          description: a.description,
+          importance: a.severity
+        })),
+        ...patterns.map(p => ({
+          title: p.title,
+          description: p.description,
+          importance: p.confidence > 80 ? "high" : "medium" as const
+        }))
+      ],
+      sections: [
+        {
+          title: "Forecasts Summary",
+          type: "table" as const,
+          content: "",
+          tableData: {
+            headers: ["Column", "Current", "Predicted", "Change", "Confidence"],
+            rows: forecasts.map(f => [
+              f.column,
+              f.currentValue.toFixed(2),
+              f.predictedValue.toFixed(2),
+              `${f.trend === "up" ? "+" : f.trend === "down" ? "-" : ""}${f.changePercent.toFixed(1)}%`,
+              `${f.confidence}%`
+            ])
+          }
+        },
+        {
+          title: "Detected Patterns",
+          type: "list" as const,
+          content: patterns.map(p => `${p.title}: ${p.description}`)
+        }
+      ],
+      recommendations: [
+        "Investigate high-severity anomalies for data quality issues",
+        "Monitor forecasted trends for business planning",
+        "Use correlation patterns to identify key drivers"
+      ]
+    });
+  };
 
   // Calculate statistics for each numeric column
   const columnStats = useMemo(() => {
@@ -333,23 +389,35 @@ const PredictiveAnalytics = ({ data, columns, columnTypes, datasetName }: Predic
                 </CardDescription>
               </div>
             </div>
-            <Button
-              onClick={runAnalysis}
-              disabled={isAnalyzing}
-              className="bg-gradient-to-r from-primary to-purple-500"
-            >
-              {isAnalyzing ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  <Zap className="h-4 w-4 mr-2" />
-                  Run Analysis
-                </>
+            <div className="flex gap-2">
+              {analysisComplete && (
+                <Button
+                  variant="outline"
+                  onClick={handleExportPdf}
+                  className="gap-2"
+                >
+                  <FileDown className="h-4 w-4" />
+                  Export PDF
+                </Button>
               )}
-            </Button>
+              <Button
+                onClick={runAnalysis}
+                disabled={isAnalyzing}
+                className="bg-gradient-to-r from-primary to-purple-500"
+              >
+                {isAnalyzing ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4 mr-2" />
+                    Run Analysis
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </CardHeader>
       </Card>
