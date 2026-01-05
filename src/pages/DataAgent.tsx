@@ -14,9 +14,10 @@ import PredictiveAnalytics from "@/components/data-agent/PredictiveAnalytics";
 import AutoDashboard from "@/components/data-agent/AutoDashboard";
 import RealTimeStream from "@/components/data-agent/RealTimeStream";
 import PowerBIDashboard from "@/components/data-agent/PowerBIDashboard";
+import WorkflowBuilder from "@/components/data-agent/WorkflowBuilder";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Table, BarChart3, MessageSquare, PieChart, Loader2, FileText, Sparkles, Activity, LayoutDashboard, Zap, Radio, Layers } from "lucide-react";
+import { Upload, Table, BarChart3, MessageSquare, PieChart, Loader2, FileText, Sparkles, Activity, LayoutDashboard, Zap, Radio, Layers, Link2 } from "lucide-react";
 
 export interface DatasetState {
   id?: string;
@@ -81,6 +82,7 @@ const DataAgent = () => {
 
   const tabs = [
     { value: "upload", label: "Upload", icon: Upload },
+    { value: "connect", label: "Connect", icon: Link2 },
     { value: "preview", label: "Preview", icon: Table, requiresData: true },
     { value: "nlp", label: "NLP Engine", icon: Zap, requiresData: true },
     { value: "powerbi", label: "Power BI", icon: Layers, requiresData: true },
@@ -132,7 +134,7 @@ const DataAgent = () => {
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             {/* Fixed two-row grid layout */}
             <div className="mb-8">
-              <TabsList className="w-full h-auto bg-card/80 backdrop-blur-sm p-3 rounded-2xl border border-border shadow-card grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-2">
+              <TabsList className="w-full h-auto bg-card/80 backdrop-blur-sm p-3 rounded-2xl border border-border shadow-card grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-2">
                 {tabs.map((tab) => {
                   const Icon = tab.icon;
                   const isDisabled = tab.requiresData && !dataset;
@@ -156,6 +158,10 @@ const DataAgent = () => {
             <div className="animate-fade-in">
               <TabsContent value="upload" className="mt-0 focus-visible:outline-none">
                 <DataUpload onDataLoaded={handleDataLoaded} />
+              </TabsContent>
+
+              <TabsContent value="connect" className="mt-0 focus-visible:outline-none">
+                <WorkflowBuilder onDataLoaded={handleDataLoaded} />
               </TabsContent>
 
               <TabsContent value="preview" className="mt-0 focus-visible:outline-none">
