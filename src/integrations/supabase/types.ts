@@ -162,6 +162,47 @@ export type Database = {
         }
         Relationships: []
       }
+      job_history: {
+        Row: {
+          completed_at: string | null
+          error_message: string | null
+          execution_time_ms: number | null
+          id: string
+          job_id: string
+          records_synced: number | null
+          started_at: string
+          status: string
+        }
+        Insert: {
+          completed_at?: string | null
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          job_id: string
+          records_synced?: number | null
+          started_at?: string
+          status: string
+        }
+        Update: {
+          completed_at?: string | null
+          error_message?: string | null
+          execution_time_ms?: number | null
+          id?: string
+          job_id?: string
+          records_synced?: number | null
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_history_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "scheduled_jobs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount_inr: number
@@ -227,6 +268,60 @@ export type Database = {
           display_name?: string | null
           id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      scheduled_jobs: {
+        Row: {
+          connector_config: Json
+          connector_type: string
+          created_at: string
+          cron_expression: string | null
+          id: string
+          is_active: boolean
+          last_run_at: string | null
+          last_run_message: string | null
+          last_run_status: string | null
+          name: string
+          next_run_at: string | null
+          records_synced: number | null
+          schedule_type: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          connector_config: Json
+          connector_type: string
+          created_at?: string
+          cron_expression?: string | null
+          id?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          last_run_message?: string | null
+          last_run_status?: string | null
+          name: string
+          next_run_at?: string | null
+          records_synced?: number | null
+          schedule_type: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          connector_config?: Json
+          connector_type?: string
+          created_at?: string
+          cron_expression?: string | null
+          id?: string
+          is_active?: boolean
+          last_run_at?: string | null
+          last_run_message?: string | null
+          last_run_status?: string | null
+          name?: string
+          next_run_at?: string | null
+          records_synced?: number | null
+          schedule_type?: string
+          updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
