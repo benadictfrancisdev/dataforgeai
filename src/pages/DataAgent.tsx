@@ -156,24 +156,26 @@ const DataAgent = () => {
             </div>
 
             <div className="animate-fade-in">
-              <TabsContent value="upload" className="mt-0 focus-visible:outline-none">
+              {/* Keep components mounted to preserve state - use CSS to hide instead of conditional rendering */}
+              <div className={activeTab === "upload" ? "block" : "hidden"}>
                 <DataUpload onDataLoaded={handleDataLoaded} />
-              </TabsContent>
+              </div>
 
-              <TabsContent value="connect" className="mt-0 focus-visible:outline-none">
+              <div className={activeTab === "connect" ? "block" : "hidden"}>
                 <WorkflowBuilder onDataLoaded={handleDataLoaded} />
-              </TabsContent>
+              </div>
 
-              <TabsContent value="preview" className="mt-0 focus-visible:outline-none">
+              {/* Data-dependent components - use CSS visibility for persistence */}
+              <div className={activeTab === "preview" ? "block" : "hidden"}>
                 {dataset && (
                   <DataPreview 
                     dataset={dataset} 
                     onDataCleaned={handleDataCleaned}
                   />
                 )}
-              </TabsContent>
+              </div>
 
-              <TabsContent value="nlp" className="mt-0 focus-visible:outline-none">
+              <div className={activeTab === "nlp" ? "block" : "hidden"}>
                 {dataset && (
                   <NaturalLanguageEngine
                     data={dataset.cleanedData || dataset.rawData}
@@ -182,9 +184,9 @@ const DataAgent = () => {
                     datasetName={dataset.name}
                   />
                 )}
-              </TabsContent>
+              </div>
 
-              <TabsContent value="powerbi" className="mt-0 focus-visible:outline-none">
+              <div className={activeTab === "powerbi" ? "block" : "hidden"}>
                 {dataset && (
                   <PowerBIDashboard
                     data={dataset.cleanedData || dataset.rawData}
@@ -193,9 +195,9 @@ const DataAgent = () => {
                     datasetName={dataset.name}
                   />
                 )}
-              </TabsContent>
+              </div>
 
-              <TabsContent value="stream" className="mt-0 focus-visible:outline-none">
+              <div className={activeTab === "stream" ? "block" : "hidden"}>
                 {dataset && (
                   <RealTimeStream
                     data={dataset.cleanedData || dataset.rawData}
@@ -204,13 +206,13 @@ const DataAgent = () => {
                     datasetName={dataset.name}
                   />
                 )}
-              </TabsContent>
+              </div>
 
-              <TabsContent value="visualize" className="mt-0 focus-visible:outline-none">
+              <div className={activeTab === "visualize" ? "block" : "hidden"}>
                 {dataset && <VisualizationDashboard dataset={dataset} />}
-              </TabsContent>
+              </div>
 
-              <TabsContent value="dashboard" className="mt-0 focus-visible:outline-none">
+              <div className={activeTab === "dashboard" ? "block" : "hidden"}>
                 {dataset && (
                   <AutoDashboard
                     data={dataset.cleanedData || dataset.rawData}
@@ -219,9 +221,9 @@ const DataAgent = () => {
                     datasetName={dataset.name}
                   />
                 )}
-              </TabsContent>
+              </div>
 
-              <TabsContent value="predict" className="mt-0 focus-visible:outline-none">
+              <div className={activeTab === "predict" ? "block" : "hidden"}>
                 {dataset && (
                   <PredictiveAnalytics
                     data={dataset.cleanedData || dataset.rawData}
@@ -230,19 +232,19 @@ const DataAgent = () => {
                     datasetName={dataset.name}
                   />
                 )}
-              </TabsContent>
+              </div>
 
-              <TabsContent value="analyze" className="mt-0 focus-visible:outline-none">
+              <div className={activeTab === "analyze" ? "block" : "hidden"}>
                 {dataset && <AnalysisPanel dataset={dataset} />}
-              </TabsContent>
+              </div>
 
-              <TabsContent value="report" className="mt-0 focus-visible:outline-none">
+              <div className={activeTab === "report" ? "block" : "hidden"}>
                 {dataset && <ReportGenerator dataset={dataset} />}
-              </TabsContent>
+              </div>
 
-              <TabsContent value="chat" className="mt-0 focus-visible:outline-none">
+              <div className={activeTab === "chat" ? "block" : "hidden"}>
                 {dataset && <DataChat dataset={dataset} />}
-              </TabsContent>
+              </div>
             </div>
           </Tabs>
         </div>

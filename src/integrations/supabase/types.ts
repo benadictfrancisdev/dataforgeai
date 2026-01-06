@@ -82,6 +82,80 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          chart_suggestion: Json | null
+          content: string
+          created_at: string
+          id: string
+          role: string
+          sentiment: Json | null
+          session_id: string
+          suggestions: string[] | null
+          user_id: string
+        }
+        Insert: {
+          chart_suggestion?: Json | null
+          content: string
+          created_at?: string
+          id?: string
+          role: string
+          sentiment?: Json | null
+          session_id: string
+          suggestions?: string[] | null
+          user_id: string
+        }
+        Update: {
+          chart_suggestion?: Json | null
+          content?: string
+          created_at?: string
+          id?: string
+          role?: string
+          sentiment?: Json | null
+          session_id?: string
+          suggestions?: string[] | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "conversation_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      conversation_sessions: {
+        Row: {
+          created_at: string
+          dataset_name: string
+          id: string
+          is_active: boolean
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dataset_name: string
+          id?: string
+          is_active?: boolean
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dataset_name?: string
+          id?: string
+          is_active?: boolean
+          title?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       data_chats: {
         Row: {
           content: string
@@ -361,6 +435,30 @@ export type Database = {
           price_inr?: number
           price_usd?: number
           slug?: string
+        }
+        Relationships: []
+      }
+      user_session_state: {
+        Row: {
+          id: string
+          state_key: string
+          state_value: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          state_key: string
+          state_value: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          state_key?: string
+          state_value?: Json
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }

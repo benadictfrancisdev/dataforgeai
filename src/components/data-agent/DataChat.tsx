@@ -4,18 +4,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Send, Bot, User, Loader2, Palette, Mail, MessageCircle, 
+  Send, Bot, User, Loader2, Palette, MessageCircle, 
   Mic, MicOff, Volume2, VolumeX, Sparkles, TrendingUp, 
-  BarChart3, PieChart, LineChart, Settings, ChevronDown,
-  Lightbulb, Heart, Frown, Smile, HelpCircle, Zap, Brain
+  BarChart3, PieChart, LineChart, ChevronDown,
+  Lightbulb, Frown, Smile, HelpCircle, Zap, Brain, Trash2, History
 } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useVoiceInput, speakText, stopSpeaking } from "@/hooks/useVoiceInput";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
+import { useAuth } from "@/hooks/useAuth";
 import type { DatasetState } from "@/pages/DataAgent";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
+import type { Json } from "@/integrations/supabase/types";
 
 interface DataChatProps {
   dataset: DatasetState;
@@ -80,15 +82,18 @@ const getChartIcon = (type: string) => {
 };
 
 const DataChat = ({ dataset }: DataChatProps) => {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [selectedColor, setSelectedColor] = useState(CHAT_COLORS[0]);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [autoSuggestions, setAutoSuggestions] = useState<Suggestion[]>([]);
   const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [didYouMean, setDidYouMean] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   
@@ -99,6 +104,112 @@ const DataChat = ({ dataset }: DataChatProps) => {
       setInput(prev => prev + ' ' + text);
     },
   });
+
+  // Load or create session and messages on mount
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      if (!user || !dataset.name) {
+        setIsLoadingHistory(false);
+        return;
+      }
+
+      try {
+        // Find existing active session for this dataset
+        const { data: existingSession } = await supabase
+          .from('conversation_sessions')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('dataset_name', dataset.name)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (existingSession) {
+          setSessionId(existingSession.id);
+          
+          // Load messages for this session
+          const { data: savedMessages } = await supabase
+            .from('chat_messages')
+            .select('*')
+            .eq('session_id', existingSession.id)
+            .order('created_at', { ascending: true });
+
+          if (savedMessages && savedMessages.length > 0) {
+            const loadedMessages: Message[] = savedMessages.map(m => ({
+              role: m.role as 'user' | 'assistant',
+              content: m.content,
+              sentiment: m.sentiment as Message['sentiment'],
+              suggestions: m.suggestions || undefined,
+              chartSuggestion: m.chart_suggestion as Message['chartSuggestion'],
+              timestamp: new Date(m.created_at),
+            }));
+            setMessages(loadedMessages);
+          }
+        } else {
+          // Create new session
+          const { data: newSession } = await supabase
+            .from('conversation_sessions')
+            .insert([{
+              user_id: user.id,
+              dataset_name: dataset.name,
+              title: `Chat with ${dataset.name}`,
+            }])
+            .select()
+            .single();
+
+          if (newSession) {
+            setSessionId(newSession.id);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load chat history:', error);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+
+    loadChatHistory();
+  }, [user, dataset.name]);
+
+  // Save message to database
+  const saveMessage = async (message: Message) => {
+    if (!user || !sessionId) return;
+
+    try {
+      await supabase
+        .from('chat_messages')
+        .insert([{
+          session_id: sessionId,
+          user_id: user.id,
+          role: message.role,
+          content: message.content,
+          sentiment: message.sentiment as unknown as Json,
+          suggestions: message.suggestions || null,
+          chart_suggestion: message.chartSuggestion as unknown as Json,
+        }]);
+    } catch (error) {
+      console.error('Failed to save message:', error);
+    }
+  };
+
+  // Clear chat history
+  const clearHistory = async () => {
+    if (!sessionId) return;
+
+    try {
+      await supabase
+        .from('chat_messages')
+        .delete()
+        .eq('session_id', sessionId);
+
+      setMessages([]);
+      toast.success('Chat history cleared');
+    } catch (error) {
+      console.error('Failed to clear history:', error);
+      toast.error('Failed to clear history');
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -114,7 +225,6 @@ const DataChat = ({ dataset }: DataChatProps) => {
       setInput(prev => {
         const words = prev.split(' ').filter(w => w);
         const newWords = transcript.split(' ').filter(w => w);
-        // Only add new words
         return [...words, ...newWords.slice(-1)].join(' ');
       });
     }
@@ -261,6 +371,9 @@ const DataChat = ({ dataset }: DataChatProps) => {
     };
     
     setMessages(prev => [...prev, userMessage]);
+    // Save user message to database
+    saveMessage(userMessage);
+    
     setInput("");
     setShowSuggestions(false);
     setIsLoading(true);
@@ -311,6 +424,8 @@ const DataChat = ({ dataset }: DataChatProps) => {
         timestamp: new Date(),
       };
       setMessages(prev => [...prev, assistantMessage]);
+      // Save assistant message to database
+      saveMessage(assistantMessage);
       
       // Speak response if voice enabled
       if (voiceEnabled && preferences.uiPreferences.voiceEnabled) {
@@ -405,6 +520,19 @@ const DataChat = ({ dataset }: DataChatProps) => {
             {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </Button>
 
+          {/* Clear History */}
+          {messages.length > 0 && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={clearHistory}
+              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+              title="Clear chat history"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          )}
+
           {/* Color Theme */}
           <Popover>
             <PopoverTrigger asChild>
@@ -431,6 +559,14 @@ const DataChat = ({ dataset }: DataChatProps) => {
           </Popover>
         </div>
       </div>
+
+      {/* Loading History Indicator */}
+      {isLoadingHistory && (
+        <div className="flex items-center justify-center gap-2 p-4 text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span className="text-sm">Loading chat history...</span>
+        </div>
+      )}
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">
