@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { 
   Database, 
   FileSpreadsheet, 
@@ -166,32 +167,97 @@ const WorkflowBuilder = ({ onDataLoaded }: WorkflowBuilderProps) => {
     
     if (!connector) return;
 
-    // Simulate syncing and fetching data
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Check if this connector type supports real API fetching
+      const supportedTypes = ['google_sheets', 'csv_url', 'json_api', 'airtable', 'notion'];
+      
+      if (supportedTypes.includes(connector.type)) {
+        // Call edge function for real data fetching
+        const { data: response, error } = await supabase.functions.invoke('fetch-connector-data', {
+          body: {
+            type: connector.type,
+            config: {
+              ...connector.config,
+              // Map table name to tableId for Airtable
+              tableId: connector.config.tableName,
+              // Map token to apiKey for Notion
+              apiKey: connector.config.apiKey || connector.config.token,
+            }
+          }
+        });
 
-    // Generate sample data based on connector type
-    const sampleData = generateSampleData(connector.type);
-    
-    setConnectors(prev => prev.map(c => 
-      c.id === connectorId 
-        ? { ...c, lastSync: new Date().toISOString() }
-        : c
-    ));
+        if (error) {
+          throw new Error(error.message || 'Failed to fetch data');
+        }
 
-    setIsSyncing(null);
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to fetch data from connector');
+        }
 
-    // Load the data into the platform
-    onDataLoaded({
-      name: `${connector.name} Import`,
-      rawData: sampleData,
-      columns: Object.keys(sampleData[0] || {}),
-      status: "imported"
-    });
+        const fetchedData = response.data as Record<string, unknown>[];
+        
+        setConnectors(prev => prev.map(c => 
+          c.id === connectorId 
+            ? { ...c, lastSync: new Date().toISOString(), status: "connected" }
+            : c
+        ));
 
-    toast({
-      title: "Data Synced",
-      description: `${sampleData.length} records imported from ${connector.name}.`
-    });
+        setIsSyncing(null);
+
+        // Load the data into the platform
+        onDataLoaded({
+          name: `${connector.name} Import`,
+          rawData: fetchedData,
+          columns: response.columns || Object.keys(fetchedData[0] || {}),
+          status: "imported"
+        });
+
+        toast({
+          title: "Data Synced Successfully",
+          description: `${fetchedData.length} records imported from ${connector.name}.`
+        });
+      } else {
+        // For unsupported types (database, webhook, s3), use sample data
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const sampleData = generateSampleData(connector.type);
+        
+        setConnectors(prev => prev.map(c => 
+          c.id === connectorId 
+            ? { ...c, lastSync: new Date().toISOString() }
+            : c
+        ));
+
+        setIsSyncing(null);
+
+        onDataLoaded({
+          name: `${connector.name} Import`,
+          rawData: sampleData,
+          columns: Object.keys(sampleData[0] || {}),
+          status: "imported"
+        });
+
+        toast({
+          title: "Data Synced (Demo)",
+          description: `${sampleData.length} sample records loaded. Real connectivity coming soon for ${connector.type}.`
+        });
+      }
+    } catch (error) {
+      console.error('Sync error:', error);
+      
+      setConnectors(prev => prev.map(c => 
+        c.id === connectorId 
+          ? { ...c, status: "error" }
+          : c
+      ));
+
+      setIsSyncing(null);
+
+      toast({
+        title: "Sync Failed",
+        description: error instanceof Error ? error.message : 'Failed to sync data from connector',
+        variant: "destructive"
+      });
+    }
   };
 
   const handleRemoveConnector = (connectorId: string) => {
