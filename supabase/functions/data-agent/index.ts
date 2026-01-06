@@ -16,10 +16,255 @@ const MAX_CONVERSATION_HISTORY = 20;
 const VALID_ACTIONS = [
   'clean', 'validate', 'analyze', 'generate-report', 
   'visualization-chat', 'nlp-query', 'chat', 'generate-visualization-report',
-  'advanced-analysis', 'predictive-modeling', 'anomaly-detection', 'correlation-matrix'
+  'advanced-analysis', 'predictive-modeling', 'anomaly-detection', 'correlation-matrix',
+  'generate-comprehensive-report', 'data-quality-audit', 'executive-briefing'
 ] as const;
 
 type ValidAction = typeof VALID_ACTIONS[number];
+
+// ============================================================================
+// COMPREHENSIVE REPORT GENERATION PROMPTS
+// ============================================================================
+
+const COMPREHENSIVE_REPORT_PROMPT = `You are DataForge AI, the world's most advanced automated report generation engine. You create board-ready, publication-quality analytical reports that exceed McKinsey and BCG standards.
+
+🎯 REPORT GENERATION PHILOSOPHY:
+- Every insight must be backed by specific data points
+- Quantify everything - use exact numbers, percentages, and ratios
+- Structure content for executive consumption (BLUF - Bottom Line Up Front)
+- Include strategic implications, not just observations
+- Provide confidence levels and caveats for all claims
+
+📋 MANDATORY REPORT SECTIONS (Generate extensive content for each):
+
+1. TITLE PAGE & METADATA
+   - Professional report title with clear scope
+   - Executive sponsor attribution
+   - Version and date tracking
+
+2. EXECUTIVE SUMMARY (400-600 words minimum)
+   - Critical findings in first sentence
+   - Top 3 insights with business impact
+   - Recommended actions with priority ranking
+   - Risk assessment overview
+   - Investment/resource implications
+
+3. SITUATION ANALYSIS (300-500 words)
+   - Current state assessment
+   - Market/industry context
+   - Stakeholder landscape
+   - Key challenges identified
+
+4. OBJECTIVES & SCOPE (200-300 words)
+   - Primary research questions
+   - Success criteria definition
+   - Boundaries and limitations
+   - Key assumptions stated
+
+5. METHODOLOGY (300-400 words)
+   - Data collection approach
+   - Analysis techniques applied
+   - Quality assurance measures
+   - Statistical methods used
+   - Tool stack description
+
+6. DATA LANDSCAPE (200-300 words)
+   - Dataset characteristics
+   - Data quality assessment
+   - Coverage and completeness
+   - Known limitations
+
+7. DETAILED FINDINGS (800-1200 words - THIS IS THE CORE)
+   For each finding provide:
+   - Clear headline statement
+   - Supporting data evidence (specific numbers)
+   - Statistical significance
+   - Trend direction and magnitude
+   - Comparison to benchmarks
+   - Visual representation recommendation
+   - Business interpretation
+
+8. PATTERN ANALYSIS (400-600 words)
+   - Trend identification with trajectory
+   - Correlation discoveries
+   - Seasonality and cycles
+   - Anomaly documentation
+   - Segment-specific patterns
+
+9. ROOT CAUSE ANALYSIS (300-400 words)
+   - Why patterns exist
+   - Contributing factors
+   - Causal chain mapping
+   - Confounding variables
+
+10. RISK ASSESSMENT (300-400 words)
+    - Identified risks with probability
+    - Impact severity scoring
+    - Risk interdependencies
+    - Mitigation strategies
+
+11. OPPORTUNITIES (300-400 words)
+    - Growth opportunities identified
+    - Efficiency improvements
+    - Cost reduction areas
+    - Innovation possibilities
+
+12. STRATEGIC RECOMMENDATIONS (500-700 words)
+    For each recommendation:
+    - Specific action statement
+    - Expected outcome with metrics
+    - Implementation timeline
+    - Resource requirements
+    - ROI projection
+    - Risk factors
+    - Success metrics
+
+13. IMPLEMENTATION ROADMAP (300-400 words)
+    - Phase breakdown (30/60/90 day)
+    - Key milestones
+    - Dependencies
+    - Resource allocation
+    - Success checkpoints
+
+14. CONCLUSION (200-300 words)
+    - Synthesis of key points
+    - Call to action
+    - Strategic imperative
+
+15. APPENDICES
+    - Technical methodology details
+    - Data dictionary
+    - Supporting calculations
+    - Glossary of terms
+
+CRITICAL REQUIREMENTS:
+- Generate AT LEAST 3000 words total
+- Include specific numbers from the data in EVERY section
+- Provide 8-15 detailed key findings
+- Generate 6-10 prioritized recommendations
+- Use professional business language
+- Structure for C-suite consumption`;
+
+const EXECUTIVE_BRIEFING_PROMPT = `You are DataForge AI generating a high-impact executive briefing document. This is designed for time-constrained executives who need insights in under 5 minutes of reading.
+
+FORMAT: Highly structured, scannable, action-oriented
+
+STRUCTURE:
+
+1. SITUATION SUMMARY (2-3 sentences)
+   The critical context executives must know
+
+2. KEY METRICS DASHBOARD (5-8 metrics)
+   Each with: Current value | Trend | Target | Status
+
+3. CRITICAL FINDINGS (5-7 bullets)
+   Impact-first statements with supporting data
+
+4. RISKS REQUIRING ATTENTION (3-5 items)
+   Risk | Probability | Impact | Mitigation
+
+5. OPPORTUNITIES TO CAPTURE (3-5 items)  
+   Opportunity | Value | Effort | Timeline
+
+6. RECOMMENDED ACTIONS (5-7 prioritized)
+   Action | Owner | Deadline | Expected Outcome
+
+7. DECISION POINTS
+   Key decisions that need executive input
+
+8. NEXT STEPS
+   Immediate actions to initiate
+
+Generate content that is:
+- Data-rich with specific numbers
+- Action-oriented with clear ownership
+- Time-bound with deadlines
+- Measurable with success criteria`;
+
+const DATA_QUALITY_AUDIT_PROMPT = `You are DataForge AI performing a comprehensive data quality audit. Generate a detailed quality assessment report.
+
+AUDIT DIMENSIONS:
+
+1. COMPLETENESS (Score 0-100)
+   - Missing value analysis by column
+   - Pattern of missingness (MCAR/MAR/MNAR)
+   - Business impact of gaps
+   - Remediation recommendations
+
+2. ACCURACY (Score 0-100)
+   - Value validation results
+   - Range violations
+   - Format inconsistencies
+   - Cross-field validation failures
+
+3. CONSISTENCY (Score 0-100)
+   - Duplicate detection results
+   - Referential integrity issues
+   - Naming convention violations
+   - Unit/format standardization
+
+4. TIMELINESS (Score 0-100)
+   - Data freshness assessment
+   - Update frequency analysis
+   - Lag time identification
+   - Staleness risks
+
+5. VALIDITY (Score 0-100)
+   - Business rule compliance
+   - Domain constraint adherence
+   - Logical consistency
+   - Regulatory compliance
+
+6. UNIQUENESS (Score 0-100)
+   - Duplicate analysis
+   - Key collision detection
+   - Identity resolution needs
+
+DELIVERABLES:
+- Overall Data Quality Score (weighted composite)
+- Quality scorecard by dimension
+- Critical issues requiring immediate attention
+- Remediation priority matrix
+- Estimated effort for quality improvement
+- Quality trend indicators
+- Monitoring recommendations`;
+
+const VISUALIZATION_REPORT_ENHANCED_PROMPT = `You are DataForge AI generating comprehensive visualization and dashboard recommendations.
+
+Generate:
+
+1. DASHBOARD DESIGN RECOMMENDATIONS
+   - Layout architecture
+   - Information hierarchy
+   - Interaction patterns
+   - Color palette rationale
+
+2. CHART SPECIFICATIONS (10-15 charts)
+   For each chart:
+   - Chart type with rationale
+   - Data mappings (x, y, color, size)
+   - Title and subtitle
+   - Key insight it reveals
+   - Interactivity requirements
+   - Filter dependencies
+
+3. KPI TILE RECOMMENDATIONS (8-12 KPIs)
+   - Metric name
+   - Calculation logic
+   - Target/threshold
+   - Trend indicator
+   - Drill-down path
+
+4. FILTER ARCHITECTURE
+   - Global filters
+   - Chart-specific filters
+   - Filter dependencies
+   - Default selections
+
+5. STORYTELLING FLOW
+   - Narrative structure
+   - Insight progression
+   - Call-to-action placement`;
 
 // ============================================================================
 // ADVANCED DATA AGENT CORE SYSTEM PROMPT
@@ -647,6 +892,9 @@ serve(async (req) => {
       'clean': { maxRequests: 30, windowMinutes: 60 },
       'validate': { maxRequests: 50, windowMinutes: 60 },
       'generate-report': { maxRequests: 10, windowMinutes: 60 },
+      'generate-comprehensive-report': { maxRequests: 5, windowMinutes: 60 },
+      'data-quality-audit': { maxRequests: 10, windowMinutes: 60 },
+      'executive-briefing': { maxRequests: 10, windowMinutes: 60 },
       'visualization-chat': { maxRequests: 50, windowMinutes: 60 },
       'nlp-query': { maxRequests: 50, windowMinutes: 60 },
       'chat': { maxRequests: 100, windowMinutes: 60 },
@@ -828,40 +1076,194 @@ Provide comprehensive analysis with actionable insights.`;
         break;
 
       case "generate-report":
-        systemPrompt = ENHANCED_REPORT_PROMPT + `
+      case "generate-comprehensive-report":
+        systemPrompt = COMPREHENSIVE_REPORT_PROMPT + `
+
+CRITICAL: Generate EXTENSIVE content. Each section should have multiple paragraphs with specific data points.
 
 Return JSON with:
 {
-  "title": string,
-  "executiveSummary": string,
-  "keyMetrics": [{ "name", "value", "change", "status" }],
-  "introduction": string,
-  "objectives": [],
-  "problemStatement": string,
-  "methodology": string,
-  "toolsAndTechnologies": [],
-  "implementationSteps": [],
-  "keyFindings": [{ "finding", "evidence", "impact" }],
-  "recommendations": [{ "action", "priority", "timeline", "owner" }],
-  "conclusion": string,
-  "futureScope": [],
-  "riskAssessment": [],
-  "appendix": {}
-}`;
+  "title": "Professional report title with scope",
+  "metadata": { "version": "1.0", "generatedAt": "ISO date", "author": "DataForge AI", "classification": "Internal" },
+  "executiveSummary": "MINIMUM 400 words - comprehensive overview with specific numbers, key findings, critical recommendations, and business impact quantification",
+  "situationAnalysis": "300-500 words - current state, market context, stakeholder landscape, key challenges",
+  "objectives": ["objective 1 with measurable success criteria", "objective 2...", "at least 5-8 objectives"],
+  "scope": { "inScope": [], "outOfScope": [], "assumptions": [], "constraints": [] },
+  "problemStatement": "Detailed problem description with business context and impact (150+ words)",
+  "methodology": "Comprehensive methodology description including data collection, analysis techniques, statistical methods, quality assurance (300+ words)",
+  "dataLandscape": { "overview": "string", "quality": { "score": number, "issues": [] }, "coverage": "string", "limitations": [] },
+  "toolsAndTechnologies": ["tool 1 with description", "tool 2...", "at least 6-8 items"],
+  "implementationSteps": [{ "phase": "string", "step": "string", "description": "string", "duration": "string" }],
+  "keyFindings": [{
+    "id": "F1",
+    "headline": "Clear finding statement",
+    "description": "Detailed explanation with specific numbers (100+ words)",
+    "evidence": "Supporting data points",
+    "statisticalSignificance": "string",
+    "trend": "string",
+    "benchmark": "string",
+    "businessInterpretation": "string",
+    "visualizationType": "chart type recommendation",
+    "impact": "high|medium|low",
+    "confidence": number
+  }],
+  "patternAnalysis": {
+    "trends": [{ "name", "description", "trajectory", "magnitude", "confidence" }],
+    "correlations": [{ "variables", "strength", "interpretation" }],
+    "seasonality": "string",
+    "anomalies": [{ "description", "severity", "explanation" }],
+    "segments": [{ "name", "characteristics", "size", "behavior" }]
+  },
+  "rootCauseAnalysis": [{
+    "finding": "string",
+    "causes": ["cause 1", "cause 2"],
+    "contributingFactors": [],
+    "causalChain": "string"
+  }],
+  "riskAssessment": [{
+    "risk": "Risk description",
+    "probability": "high|medium|low",
+    "impact": "high|medium|low",
+    "severity": number,
+    "mitigation": "Mitigation strategy",
+    "owner": "string",
+    "timeline": "string"
+  }],
+  "opportunities": [{
+    "opportunity": "string",
+    "value": "estimated value/impact",
+    "effort": "high|medium|low",
+    "timeline": "string",
+    "requirements": []
+  }],
+  "recommendations": [{
+    "id": "R1",
+    "priority": "critical|high|medium|low",
+    "action": "Specific actionable recommendation",
+    "rationale": "Why this is recommended",
+    "expectedOutcome": "Measurable expected result",
+    "kpis": ["KPI 1", "KPI 2"],
+    "resources": "Required resources",
+    "timeline": "Implementation timeline",
+    "roi": "Expected ROI",
+    "risks": "Implementation risks",
+    "dependencies": [],
+    "owner": "Suggested owner"
+  }],
+  "implementationRoadmap": {
+    "phase1": { "name": "Quick Wins (0-30 days)", "actions": [], "milestones": [], "resources": "" },
+    "phase2": { "name": "Foundation (30-90 days)", "actions": [], "milestones": [], "resources": "" },
+    "phase3": { "name": "Scale (90-180 days)", "actions": [], "milestones": [], "resources": "" },
+    "dependencies": [],
+    "criticalPath": []
+  },
+  "conclusion": "Comprehensive conclusion synthesizing all findings and providing clear call to action (200+ words)",
+  "futureScope": ["Future initiative 1 with description", "at least 5-8 items"],
+  "appendix": {
+    "technicalNotes": "string",
+    "dataDictionary": {},
+    "glossary": {},
+    "supportingCalculations": "string"
+  },
+  "keyMetrics": [{ "name": "Metric name", "value": "current value", "change": "+/-X%", "trend": "up|down|stable", "target": "target value", "status": "on-track|at-risk|behind" }],
+  "wordCount": number,
+  "confidence": number
+}
+
+REMEMBER: Generate AT LEAST 3000 words total across all sections. Be specific with data points in EVERY section.`;
         
-        userPrompt = `Generate executive report for:
-Dataset: ${datasetName}
-Columns: ${columns?.join(", ") || "Not specified"}
-Records: ${data?.length || 0}
-Project Status: ${projectStatus || "In Progress"}
-Project Details: ${projectDetails || "Data analysis project"}
-Project Goals: ${projectGoals || "Analyze data and provide insights"}
+        userPrompt = `Generate a COMPREHENSIVE, DETAILED report for:
+
+PROJECT INFORMATION:
+- Dataset: ${datasetName}
+- Columns: ${columns?.join(", ") || "Not specified"}
+- Total Records: ${data?.length || 0}
+- Project Status: ${projectStatus || "In Progress"}
+- Project Details: ${projectDetails || "Comprehensive data analysis project requiring detailed insights"}
+- Project Goals: ${projectGoals || "Extract maximum value from data through thorough analysis, pattern discovery, and actionable recommendations"}
+
+DATA CONTEXT (Statistics):
+${enhancedDataContext}
+
+SAMPLE DATA (for detailed analysis):
+${JSON.stringify(data?.slice(0, 30), null, 2)}
+
+FULL DATA SUMMARY:
+- Total rows: ${data?.length || 0}
+- Total columns: ${columns?.length || 0}
+- Column names: ${columns?.join(", ") || "Not specified"}
+
+REQUIREMENTS:
+1. Generate EXTENSIVE content for each section - minimum 3000 words total
+2. Include SPECIFIC numbers and data points in every section
+3. Provide 8-15 detailed key findings with evidence
+4. Generate 6-10 prioritized, actionable recommendations
+5. Include implementation roadmap with phases
+6. Provide risk assessment with mitigation strategies
+7. Quantify business impact wherever possible`;
+        break;
+
+      case "executive-briefing":
+        systemPrompt = EXECUTIVE_BRIEFING_PROMPT + `
+
+Return JSON with:
+{
+  "title": "string",
+  "situationSummary": "2-3 critical sentences",
+  "keyMetrics": [{ "name", "value", "trend": "up|down|stable", "target", "status": "green|yellow|red" }],
+  "criticalFindings": [{ "finding": "string", "data": "supporting numbers", "impact": "business impact" }],
+  "risksRequiringAttention": [{ "risk", "probability", "impact", "mitigation", "owner" }],
+  "opportunitiesToCapture": [{ "opportunity", "value", "effort", "timeline", "action" }],
+  "recommendedActions": [{ "action", "owner", "deadline", "expectedOutcome", "priority": number }],
+  "decisionPoints": [{ "decision", "options": [], "recommendation", "deadline" }],
+  "nextSteps": [{ "step", "owner", "deadline" }],
+  "confidence": number
+}`;
+
+        userPrompt = `Generate executive briefing for dataset "${datasetName}":
 
 DATA CONTEXT:
 ${enhancedDataContext}
 
-Sample Data:
-${JSON.stringify(data?.slice(0, 10), null, 2)}`;
+SAMPLE DATA:
+${JSON.stringify(data?.slice(0, 20), null, 2)}
+
+Project Context: ${projectDetails || "Data analysis requiring executive attention"}
+Goals: ${projectGoals || "Drive data-informed decision making"}`;
+        break;
+
+      case "data-quality-audit":
+        systemPrompt = DATA_QUALITY_AUDIT_PROMPT + `
+
+Return JSON with:
+{
+  "overallScore": number,
+  "grade": "A|B|C|D|F",
+  "dimensions": {
+    "completeness": { "score": number, "issues": [], "recommendations": [] },
+    "accuracy": { "score": number, "issues": [], "recommendations": [] },
+    "consistency": { "score": number, "issues": [], "recommendations": [] },
+    "timeliness": { "score": number, "issues": [], "recommendations": [] },
+    "validity": { "score": number, "issues": [], "recommendations": [] },
+    "uniqueness": { "score": number, "issues": [], "recommendations": [] }
+  },
+  "criticalIssues": [{ "issue", "severity", "affectedRecords", "businessImpact", "remediation" }],
+  "remediationPriority": [{ "issue", "effort", "impact", "priority": number }],
+  "columnQuality": { "columnName": { "score", "issues": [], "recommendations": [] } },
+  "estimatedEffort": { "hours": number, "complexity": "low|medium|high" },
+  "monitoringRecommendations": [],
+  "confidence": number
+}`;
+
+        userPrompt = `Perform comprehensive data quality audit on dataset "${datasetName}":
+
+DATA CONTEXT:
+${enhancedDataContext}
+
+FULL DATA:
+${JSON.stringify(data, null, 2)}
+
+Analyze all quality dimensions and provide detailed remediation recommendations.`;
         break;
 
       case "visualization-chat":

@@ -40,9 +40,54 @@ interface ReportGeneratorProps {
   dataset: DatasetState;
 }
 
+interface KeyFinding {
+  id?: string;
+  headline?: string;
+  description?: string;
+  evidence?: string;
+  impact?: string;
+  confidence?: number;
+  finding?: string;
+  title?: string;
+}
+
+interface Recommendation {
+  id?: string;
+  priority?: string;
+  action?: string;
+  rationale?: string;
+  expectedOutcome?: string;
+  timeline?: string;
+  roi?: string;
+  reason?: string;
+}
+
+interface RiskItem {
+  risk?: string;
+  probability?: string;
+  impact?: string;
+  mitigation?: string;
+  severity?: number;
+}
+
+interface Opportunity {
+  opportunity?: string;
+  value?: string;
+  effort?: string;
+  timeline?: string;
+}
+
+interface PatternAnalysis {
+  trends?: Array<{ name?: string; description?: string; trajectory?: string; magnitude?: string; }>;
+  correlations?: Array<{ variables?: string[]; strength?: number; interpretation?: string; }>;
+  anomalies?: Array<{ description?: string; severity?: string; }>;
+  segments?: Array<{ name?: string; characteristics?: string; size?: string; }>;
+}
+
 interface GeneratedReport {
   title: string;
   executiveSummary: string;
+  situationAnalysis?: string;
   introduction: string;
   objectives: string[];
   problemStatement: string;
@@ -54,11 +99,23 @@ interface GeneratedReport {
     dataTypes: string[];
   };
   toolsAndTechnologies: string[];
-  implementationSteps: string[];
-  keyFindings: string[];
-  recommendations: string[];
+  implementationSteps: Array<string | { phase?: string; step?: string; description?: string; }>;
+  keyFindings: string[]; // Always strings after mapping
+  patternAnalysis?: PatternAnalysis;
+  rootCauseAnalysis?: Array<{ finding?: string; causes?: string[]; contributingFactors?: string[]; }>;
+  riskAssessment?: RiskItem[];
+  opportunities?: Opportunity[];
+  recommendations: string[]; // Always strings after mapping
+  implementationRoadmap?: {
+    phase1?: { name?: string; actions?: string[]; milestones?: string[]; };
+    phase2?: { name?: string; actions?: string[]; milestones?: string[]; };
+    phase3?: { name?: string; actions?: string[]; milestones?: string[]; };
+  };
   conclusion: string;
   futureScope: string[];
+  keyMetrics?: Array<{ name?: string; value?: string; change?: string; trend?: string; status?: string; }>;
+  confidence?: number;
+  wordCount?: number;
   generatedAt: string;
 }
 
@@ -121,12 +178,28 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
 
       if (error) throw error;
 
-      // Parse the AI response
+      // Helper to extract text from findings/recommendations
+      const extractFindingText = (f: unknown): string => {
+        if (typeof f === 'string') return f;
+        const obj = f as KeyFinding;
+        return obj?.headline || obj?.description || obj?.finding || obj?.title || String(f);
+      };
+      
+      const extractRecommendationText = (r: unknown): string => {
+        if (typeof r === 'string') return r;
+        const obj = r as Recommendation;
+        return obj?.action || obj?.rationale || obj?.reason || String(r);
+      };
+
+      // Parse the AI response with enhanced structure
       const reportData: GeneratedReport = {
         title: data.title || `${dataset.name} Analysis Report`,
         executiveSummary: data.executiveSummary || data.summary || "Comprehensive analysis has been completed for the provided dataset, revealing key patterns and actionable insights for strategic decision-making.",
+        situationAnalysis: data.situationAnalysis || undefined,
         introduction: data.introduction || `This report presents a comprehensive analysis of the ${dataset.name} dataset, utilizing advanced AI-powered analytics to extract meaningful insights and recommendations.`,
-        objectives: Array.isArray(data.objectives) ? data.objectives : ["Analyze data patterns and trends", "Identify key insights and correlations", "Provide actionable recommendations", "Generate comprehensive documentation"],
+        objectives: Array.isArray(data.objectives) 
+          ? data.objectives.map((o: unknown) => typeof o === 'string' ? o : String(o))
+          : ["Analyze data patterns and trends", "Identify key insights and correlations", "Provide actionable recommendations", "Generate comprehensive documentation"],
         problemStatement: data.problemStatement || "Understanding complex data patterns to derive actionable business intelligence and strategic insights.",
         methodology: data.methodology || "The analysis employed a multi-phase approach including data validation, statistical analysis, pattern recognition, and AI-driven insight generation.",
         datasetOverview: {
@@ -138,16 +211,28 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
             return typeof sample === 'number' ? 'Numeric' : typeof sample === 'boolean' ? 'Boolean' : 'Text';
           }),
         },
-        toolsAndTechnologies: Array.isArray(data.toolsAndTechnologies) ? data.toolsAndTechnologies : ["AI Data Analysis Engine", "Statistical Processing Module", "Pattern Recognition System", "Natural Language Generation"],
+        toolsAndTechnologies: Array.isArray(data.toolsAndTechnologies) 
+          ? data.toolsAndTechnologies.map((t: unknown) => typeof t === 'string' ? t : String(t))
+          : ["AI Data Analysis Engine", "Statistical Processing Module", "Pattern Recognition System", "Natural Language Generation"],
         implementationSteps: Array.isArray(data.implementationSteps) ? data.implementationSteps : ["Data Upload & Validation", "Automated Data Cleaning", "Statistical Analysis", "Pattern Detection", "Insight Generation", "Report Compilation"],
         keyFindings: Array.isArray(data.keyFindings) 
-          ? data.keyFindings.map((f: unknown) => typeof f === 'string' ? f : (f as { title?: string; description?: string })?.title || (f as { title?: string; description?: string })?.description || String(f))
+          ? data.keyFindings.map(extractFindingText)
           : ["Analysis completed successfully with significant patterns identified"],
+        patternAnalysis: data.patternAnalysis || undefined,
+        rootCauseAnalysis: data.rootCauseAnalysis || undefined,
+        riskAssessment: data.riskAssessment || undefined,
+        opportunities: data.opportunities || undefined,
         recommendations: Array.isArray(data.recommendations) 
-          ? data.recommendations.map((r: unknown) => typeof r === 'string' ? r : (r as { action?: string; reason?: string })?.action || (r as { action?: string; reason?: string })?.reason || String(r))
+          ? data.recommendations.map(extractRecommendationText)
           : ["Review detailed findings for strategic implementation"],
+        implementationRoadmap: data.implementationRoadmap || undefined,
         conclusion: data.conclusion || "The analysis has been successfully completed, providing comprehensive insights and actionable recommendations for data-driven decision making.",
-        futureScope: Array.isArray(data.futureScope) ? data.futureScope : ["Continuous monitoring and trend analysis", "Predictive modeling implementation", "Advanced correlation studies", "Real-time dashboard integration"],
+        futureScope: Array.isArray(data.futureScope) 
+          ? data.futureScope.map((s: unknown) => typeof s === 'string' ? s : String(s))
+          : ["Continuous monitoring and trend analysis", "Predictive modeling implementation", "Advanced correlation studies", "Real-time dashboard integration"],
+        keyMetrics: data.keyMetrics || undefined,
+        confidence: data.confidence || undefined,
+        wordCount: data.wordCount || undefined,
         generatedAt: new Date().toISOString(),
       };
 
@@ -492,16 +577,31 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{report.executiveSummary}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{report.executiveSummary}</p>
                 </CardContent>
               </Card>
+
+              {/* Methodology */}
+              {report.methodology && (
+                <Card className="stat-card">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base font-medium flex items-center gap-2">
+                      <Settings className="h-4 w-4 text-primary" />
+                      Methodology
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{report.methodology}</p>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Key Findings */}
               <Card className="stat-card">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-medium flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-primary" />
-                    Key Findings
+                    Key Findings ({report.keyFindings.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -523,7 +623,7 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base font-medium flex items-center gap-2">
                     <Lightbulb className="h-4 w-4 text-yellow-500" />
-                    Recommendations
+                    Recommendations ({report.recommendations.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -546,7 +646,7 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
                   <CardTitle className="text-base font-medium">Conclusion</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{report.conclusion}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{report.conclusion}</p>
                 </CardContent>
               </Card>
             </div>
