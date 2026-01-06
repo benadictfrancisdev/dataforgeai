@@ -52,7 +52,7 @@ type ChartType = "bar" | "line" | "pie" | "area" | "scatter";
 const VisualizationDashboard = ({ dataset }: VisualizationDashboardProps) => {
   const data = dataset.cleanedData || dataset.rawData;
   const columns = dataset.columns;
-  const { exportToPdf } = usePdfExport();
+  const { exportToPdf, exportToCsv } = usePdfExport();
 
   const [selectedXAxis, setSelectedXAxis] = useState(columns[0] || "");
   const [selectedYAxis, setSelectedYAxis] = useState(columns[1] || "");
@@ -307,8 +307,12 @@ const VisualizationDashboard = ({ dataset }: VisualizationDashboardProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Export Button */}
-      <div className="flex justify-end">
+      {/* Export Buttons */}
+      <div className="flex justify-end gap-2">
+        <Button onClick={() => exportToCsv(data, dataset.name)} variant="outline" className="gap-2">
+          <Download className="h-4 w-4" />
+          Export CSV
+        </Button>
         <Button onClick={handleExportPdf} variant="outline" className="gap-2">
           <Download className="h-4 w-4" />
           Export PDF

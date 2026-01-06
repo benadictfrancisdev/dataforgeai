@@ -7,12 +7,14 @@ import {
   Send, Bot, User, Loader2, Palette, MessageCircle, 
   Mic, MicOff, Volume2, VolumeX, Sparkles, TrendingUp, 
   BarChart3, PieChart, LineChart, ChevronDown,
-  Lightbulb, Frown, Smile, HelpCircle, Zap, Brain, Trash2, History
+  Lightbulb, Frown, Smile, HelpCircle, Zap, Brain, Trash2, 
+  Download, Share2, FileDown
 } from "lucide-react";
 import { toast } from "sonner";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useVoiceInput, speakText, stopSpeaking } from "@/hooks/useVoiceInput";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
+import { usePdfExport } from "@/hooks/usePdfExport";
 import { useAuth } from "@/hooks/useAuth";
 import type { DatasetState } from "@/pages/DataAgent";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -98,12 +100,30 @@ const DataChat = ({ dataset }: DataChatProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   
   const { preferences, trackInteraction, trackQuery, setExpertiseLevel, updateUIPreferences } = useUserPreferences();
+  const { exportChatToPdf, generateShareableLink } = usePdfExport();
   
   const { isListening, isSupported: voiceSupported, startListening, stopListening, transcript } = useVoiceInput({
     onFinalTranscript: (text) => {
       setInput(prev => prev + ' ' + text);
     },
   });
+
+  // Export handlers
+  const handleExportPdf = () => {
+    if (messages.length === 0) {
+      toast.error("No messages to export");
+      return;
+    }
+    exportChatToPdf(messages, dataset.name, `Chat with ${dataset.name}`);
+  };
+
+  const handleShareChat = () => {
+    if (messages.length === 0) {
+      toast.error("No messages to share");
+      return;
+    }
+    generateShareableLink(messages, dataset.name);
+  };
 
   // Load or create session and messages on mount
   useEffect(() => {
@@ -520,17 +540,37 @@ const DataChat = ({ dataset }: DataChatProps) => {
             {voiceEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </Button>
 
-          {/* Clear History */}
+          {/* Export & Share */}
           {messages.length > 0 && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={clearHistory}
-              className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-              title="Clear chat history"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
+            <>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleExportPdf}
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                title="Export chat to PDF"
+              >
+                <FileDown className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={handleShareChat}
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                title="Copy shareable link"
+              >
+                <Share2 className="w-4 h-4" />
+              </Button>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={clearHistory}
+                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                title="Clear chat history"
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </>
           )}
 
           {/* Color Theme */}

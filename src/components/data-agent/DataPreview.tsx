@@ -3,8 +3,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Sparkles, CheckCircle, AlertTriangle, Loader2 } from "lucide-react";
+import { Sparkles, CheckCircle, AlertTriangle, Loader2, Download, FileDown } from "lucide-react";
 import { toast } from "sonner";
+import { usePdfExport } from "@/hooks/usePdfExport";
 import type { DatasetState } from "@/pages/DataAgent";
 
 interface DataPreviewProps {
@@ -45,9 +46,45 @@ const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
   const [isCleaning, setIsCleaning] = useState(false);
   const [validationReport, setValidationReport] = useState<ValidationReport | null>(null);
   const [cleaningReport, setCleaningReport] = useState<CleaningReport | null>(null);
+  const { exportToCsv, exportToPdf } = usePdfExport();
 
   const displayData = dataset.cleanedData || dataset.rawData;
   const previewRows = displayData.slice(0, 10);
+
+  const handleExportCsv = () => {
+    exportToCsv(displayData, dataset.name);
+  };
+
+  const handleExportPdf = () => {
+    exportToPdf({
+      title: `Data Preview Report - ${dataset.name}`,
+      subtitle: `${displayData.length} records, ${dataset.columns.length} columns`,
+      datasetName: dataset.name,
+      statistics: {
+        "Total Records": displayData.length,
+        "Columns": dataset.columns.length,
+        "Status": dataset.status,
+      },
+      sections: [
+        {
+          title: "Column Overview",
+          type: "list",
+          content: dataset.columns.map(col => `${col}`)
+        },
+        {
+          title: "Sample Data",
+          type: "table",
+          content: "",
+          tableData: {
+            headers: dataset.columns.slice(0, 6),
+            rows: displayData.slice(0, 10).map(row => 
+              dataset.columns.slice(0, 6).map(col => String(row[col] ?? ""))
+            )
+          }
+        }
+      ]
+    });
+  };
 
   const handleValidate = async () => {
     setIsValidating(true);
@@ -131,7 +168,25 @@ const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
             {dataset.rawData.length} rows • {dataset.columns.length} columns
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleExportCsv}
+            className="gap-2"
+          >
+            <Download className="w-4 h-4" />
+            CSV
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={handleExportPdf}
+            className="gap-2"
+          >
+            <FileDown className="w-4 h-4" />
+            PDF
+          </Button>
           <Button 
             variant="outline" 
             onClick={handleValidate}
