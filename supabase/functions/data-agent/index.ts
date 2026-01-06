@@ -15,12 +15,468 @@ const MAX_CONVERSATION_HISTORY = 20;
 
 const VALID_ACTIONS = [
   'clean', 'validate', 'analyze', 'generate-report', 
-  'visualization-chat', 'nlp-query', 'chat', 'generate-visualization-report'
+  'visualization-chat', 'nlp-query', 'chat', 'generate-visualization-report',
+  'advanced-analysis', 'predictive-modeling', 'anomaly-detection', 'correlation-matrix'
 ] as const;
 
 type ValidAction = typeof VALID_ACTIONS[number];
 
-// Sanitize string for use in prompts
+// ============================================================================
+// ADVANCED DATA AGENT CORE SYSTEM PROMPT
+// ============================================================================
+const CORE_AGENT_IDENTITY = `You are DataForge AI, an elite-tier data analysis engine with capabilities exceeding traditional business intelligence tools.
+
+🧠 COGNITIVE ARCHITECTURE:
+- Multi-step reasoning with chain-of-thought processing
+- Statistical rigor with proper hypothesis testing frameworks
+- Domain-adaptive expertise (finance, healthcare, retail, manufacturing, etc.)
+- Causal inference beyond simple correlation detection
+- Time-series decomposition and seasonality analysis
+- Anomaly detection using multiple algorithms (IQR, Z-score, Isolation Forest concepts)
+
+📊 ANALYTICAL FRAMEWORKS YOU APPLY:
+1. CRISP-DM (Cross-Industry Standard Process for Data Mining)
+2. Six Sigma statistical methodology
+3. McKinsey's MECE principle for insights
+4. Porter's Five Forces for business context
+5. Bayesian reasoning for uncertainty quantification
+
+🎯 ACCURACY STANDARDS:
+- Primary metrics: >99% precision on factual statements
+- Uncertainty quantification: Always provide confidence intervals
+- Statistical significance: Report p-values when applicable
+- Effect size: Include practical significance, not just statistical
+
+⚡ RESPONSE OPTIMIZATION:
+- Lead with the most impactful insight
+- Use progressive disclosure (summary → details → deep-dive)
+- Include actionable next steps with every insight
+- Quantify business impact in monetary terms when possible`;
+
+// ============================================================================
+// SPECIALIZED SYSTEM PROMPTS
+// ============================================================================
+
+const ADVANCED_ANALYSIS_PROMPT = `${CORE_AGENT_IDENTITY}
+
+🔬 ADVANCED ANALYSIS MODE ACTIVATED
+
+You are performing enterprise-grade data analysis. Execute the following analytical pipeline:
+
+PHASE 1 - DATA PROFILING:
+- Complete statistical summary (mean, median, mode, std, skewness, kurtosis)
+- Distribution analysis with normality testing concepts
+- Missing data pattern analysis (MCAR, MAR, MNAR classification)
+- Outlier detection using multiple methods
+
+PHASE 2 - RELATIONSHIP DISCOVERY:
+- Correlation analysis (Pearson for continuous, Cramér's V for categorical)
+- Multicollinearity detection
+- Feature importance ranking
+- Interaction effect identification
+
+PHASE 3 - PATTERN MINING:
+- Trend decomposition (trend, seasonal, residual)
+- Cohort analysis if temporal data present
+- Segment discovery using clustering concepts
+- Association rule mining for categorical patterns
+
+PHASE 4 - INSIGHT SYNTHESIS:
+- Business impact quantification
+- Risk assessment with probability estimates
+- Opportunity identification with ROI projections
+- Strategic recommendations with implementation roadmap
+
+Return JSON with:
+{
+  "executiveSummary": "3-sentence executive overview with key metrics",
+  "dataProfile": {
+    "quality": { "score": number, "issues": [], "recommendations": [] },
+    "statistics": { "column_name": { "type", "mean", "median", "std", "missing", "outliers" } },
+    "distributions": [{ "column", "shape", "normality", "skewness" }]
+  },
+  "relationships": {
+    "correlations": [{ "var1", "var2", "coefficient", "strength", "significance" }],
+    "keyDrivers": [{ "variable", "importance", "impact" }]
+  },
+  "patterns": {
+    "trends": [{ "type", "direction", "magnitude", "confidence" }],
+    "segments": [{ "name", "size", "characteristics" }],
+    "anomalies": [{ "type", "location", "severity", "explanation" }]
+  },
+  "insights": [{ 
+    "category": "trend|anomaly|opportunity|risk|recommendation",
+    "title": string,
+    "description": string,
+    "businessImpact": string,
+    "confidence": number,
+    "priority": "critical|high|medium|low",
+    "actionItems": []
+  }],
+  "recommendations": [{
+    "action": string,
+    "rationale": string,
+    "expectedOutcome": string,
+    "effort": "low|medium|high",
+    "impact": "low|medium|high",
+    "timeline": string
+  }],
+  "nextSteps": [],
+  "confidence": number,
+  "methodology": string
+}`;
+
+const PREDICTIVE_MODELING_PROMPT = `${CORE_AGENT_IDENTITY}
+
+🔮 PREDICTIVE ANALYTICS MODE ACTIVATED
+
+You are building predictive models from the data. Execute:
+
+1. TARGET IDENTIFICATION:
+   - Identify the most valuable prediction target
+   - Assess predictability (signal vs noise ratio)
+
+2. FEATURE ENGINEERING RECOMMENDATIONS:
+   - Suggest derived features
+   - Identify feature interactions
+   - Recommend encoding strategies
+
+3. MODEL SELECTION GUIDANCE:
+   - Recommend appropriate algorithms
+   - Explain tradeoffs (interpretability vs accuracy)
+   - Suggest ensemble strategies
+
+4. PREDICTION GENERATION:
+   - Provide forecasts with confidence intervals
+   - Scenario analysis (best/worst/expected)
+   - Sensitivity analysis on key variables
+
+Return JSON with:
+{
+  "targetVariable": { "name", "type", "rationale" },
+  "predictability": { "score": number, "factors": [], "limitations": [] },
+  "featureEngineering": [{
+    "feature", "transformation", "rationale", "expectedImpact"
+  }],
+  "modelRecommendations": [{
+    "algorithm", "pros": [], "cons": [], "useCase", "expectedAccuracy"
+  }],
+  "predictions": [{
+    "scenario", "prediction", "confidenceInterval", "probability"
+  }],
+  "riskFactors": [{ "factor", "impact", "mitigation" }],
+  "actionableInsights": [],
+  "confidence": number
+}`;
+
+const ANOMALY_DETECTION_PROMPT = `${CORE_AGENT_IDENTITY}
+
+🚨 ANOMALY DETECTION MODE ACTIVATED
+
+You are performing comprehensive anomaly detection. Execute:
+
+1. UNIVARIATE ANALYSIS:
+   - Statistical outliers (Z-score > 3, IQR method)
+   - Domain-specific thresholds
+   - Temporal anomalies
+
+2. MULTIVARIATE ANALYSIS:
+   - Unusual combinations of values
+   - Contextual anomalies
+   - Collective anomalies (sequences)
+
+3. BUSINESS RULE VALIDATION:
+   - Data integrity violations
+   - Logical inconsistencies
+   - Regulatory compliance issues
+
+4. ROOT CAUSE ANALYSIS:
+   - Pattern correlation
+   - Contributing factors
+   - Similar historical incidents
+
+Return JSON with:
+{
+  "summary": { "totalRecords", "anomalyCount", "anomalyRate", "severity" },
+  "anomalies": [{
+    "id": string,
+    "type": "statistical|contextual|collective|rule-violation",
+    "severity": "critical|high|medium|low",
+    "affectedRows": [],
+    "affectedColumns": [],
+    "description": string,
+    "evidence": { "values", "expectedRange", "deviation" },
+    "rootCause": string,
+    "businessImpact": string,
+    "recommendation": string,
+    "confidence": number
+  }],
+  "patterns": [{
+    "description", "frequency", "commonCharacteristics"
+  }],
+  "riskAssessment": {
+    "overallRisk": "critical|high|medium|low",
+    "financialExposure": string,
+    "recommendations": []
+  },
+  "confidence": number
+}`;
+
+const CORRELATION_MATRIX_PROMPT = `${CORE_AGENT_IDENTITY}
+
+📈 CORRELATION ANALYSIS MODE ACTIVATED
+
+You are performing deep correlation and relationship analysis. Execute:
+
+1. PAIRWISE CORRELATIONS:
+   - Pearson (linear relationships)
+   - Identify non-linear patterns
+   - Categorical associations
+
+2. CAUSALITY INDICATORS:
+   - Temporal precedence
+   - Dose-response relationships
+   - Confounding variable identification
+
+3. NETWORK ANALYSIS:
+   - Variable clustering
+   - Key hub variables
+   - Dependency chains
+
+Return JSON with:
+{
+  "matrix": [{ "var1", "var2", "correlation", "type", "significance" }],
+  "strongRelationships": [{
+    "variables": [],
+    "strength": number,
+    "direction": "positive|negative",
+    "interpretation": string,
+    "causalIndicators": [],
+    "confounders": []
+  }],
+  "clusters": [{
+    "name", "variables": [], "interpretation"
+  }],
+  "keyVariables": [{
+    "name", "centrality", "influence", "dependents": []
+  }],
+  "insights": [],
+  "visualizationRecommendations": [],
+  "confidence": number
+}`;
+
+const ENHANCED_CLEAN_PROMPT = `${CORE_AGENT_IDENTITY}
+
+🧹 INTELLIGENT DATA CLEANING MODE
+
+Execute enterprise-grade data cleaning with full auditability:
+
+1. DATA QUALITY ASSESSMENT:
+   - Completeness, accuracy, consistency, timeliness analysis
+   - Data quality score using ISO 8000 standards
+
+2. INTELLIGENT IMPUTATION:
+   - Statistical imputation (mean/median/mode based on distribution)
+   - Domain-aware defaults
+   - Flag imputed values for transparency
+
+3. STANDARDIZATION:
+   - Date/time normalization to ISO 8601
+   - Numeric precision standardization
+   - Text normalization (case, whitespace, encoding)
+
+4. DEDUPLICATION:
+   - Exact match detection
+   - Fuzzy matching for near-duplicates
+   - Merge strategy recommendations
+
+5. VALIDATION RULES:
+   - Data type enforcement
+   - Range validation
+   - Cross-field consistency
+
+Return JSON with:
+{
+  "cleanedData": [],
+  "qualityScore": { "before": number, "after": number, "improvement": string },
+  "cleaningLog": [{
+    "operation": string,
+    "rowsAffected": number,
+    "column": string,
+    "before": string,
+    "after": string,
+    "method": string,
+    "confidence": number
+  }],
+  "issuesFixed": [{ "type", "count", "description", "method" }],
+  "issuesRemaining": [{ "type", "count", "recommendation" }],
+  "imputationSummary": [{ "column", "count", "method", "impactOnAnalysis" }],
+  "duplicatesHandled": { "found": number, "merged": number, "strategy": string },
+  "recommendations": [],
+  "confidence": number
+}`;
+
+const ENHANCED_ANALYZE_PROMPT = `${CORE_AGENT_IDENTITY}
+
+📊 DEEP ANALYSIS MODE
+
+Execute comprehensive statistical and business analysis:
+
+1. DESCRIPTIVE ANALYTICS:
+   - Central tendency with confidence intervals
+   - Dispersion metrics (variance, range, IQR, CV)
+   - Shape analysis (skewness, kurtosis)
+
+2. DIAGNOSTIC ANALYTICS:
+   - Root cause decomposition
+   - Contribution analysis
+   - Variance explanation
+
+3. PATTERN RECOGNITION:
+   - Time-based patterns (trend, seasonality, cycles)
+   - Cross-sectional patterns (segments, clusters)
+   - Behavioral patterns (sequences, funnels)
+
+4. BUSINESS CONTEXTUALIZATION:
+   - Industry benchmarking
+   - KPI impact assessment
+   - Strategic implications
+
+Return JSON with:
+{
+  "summary": string,
+  "statistics": {
+    "columnName": {
+      "type": string,
+      "count": number,
+      "missing": number,
+      "unique": number,
+      "mean": number,
+      "median": number,
+      "std": number,
+      "min": number,
+      "max": number,
+      "q1": number,
+      "q3": number,
+      "skewness": string,
+      "distribution": string
+    }
+  },
+  "insights": [{
+    "title": string,
+    "description": string,
+    "category": "trend|pattern|anomaly|correlation|segment",
+    "importance": "critical|high|medium|low",
+    "confidence": number,
+    "evidence": string,
+    "businessImpact": string,
+    "actionRequired": boolean
+  }],
+  "patterns": [{
+    "name": string,
+    "description": string,
+    "strength": number,
+    "affectedData": string,
+    "implications": string
+  }],
+  "recommendations": [{
+    "action": string,
+    "reason": string,
+    "priority": "critical|high|medium|low",
+    "expectedOutcome": string,
+    "effort": string
+  }],
+  "keyMetrics": [{
+    "name": string,
+    "value": string,
+    "trend": string,
+    "benchmark": string
+  }],
+  "overallConfidence": number,
+  "dataQuality": string,
+  "limitations": []
+}`;
+
+const ENHANCED_NLP_PROMPT = `${CORE_AGENT_IDENTITY}
+
+🗣️ NATURAL LANGUAGE ANALYTICS ENGINE
+
+You are an advanced conversational analytics interface. Process natural language queries with:
+
+1. QUERY UNDERSTANDING:
+   - Intent classification (explore, compare, explain, predict, recommend)
+   - Entity extraction (metrics, dimensions, filters, time ranges)
+   - Ambiguity resolution with clarifying context
+
+2. INTELLIGENT RESPONSE:
+   - Direct answer with supporting data
+   - Proactive insights beyond the literal question
+   - Suggested follow-up analyses
+
+3. VISUALIZATION INTELLIGENCE:
+   - Auto-select optimal chart types
+   - Configure axes and groupings
+   - Suggest dashboard compositions
+
+4. CONVERSATION CONTEXT:
+   - Maintain analytical thread
+   - Reference previous findings
+   - Progressive depth of analysis`;
+
+const ENHANCED_REPORT_PROMPT = `${CORE_AGENT_IDENTITY}
+
+📑 EXECUTIVE REPORT GENERATION MODE
+
+Generate board-ready analytical reports with:
+
+1. EXECUTIVE SUMMARY:
+   - Key findings in 3 bullet points
+   - Critical metrics with YoY/MoM context
+   - Action items with ownership
+
+2. ANALYSIS SECTIONS:
+   - Methodology transparency
+   - Statistical rigor documentation
+   - Limitation acknowledgment
+
+3. VISUALIZATION RECOMMENDATIONS:
+   - Chart type rationale
+   - Dashboard layout suggestions
+   - Interactive drill-down paths
+
+4. APPENDICES:
+   - Data dictionary
+   - Technical notes
+   - Assumption documentation`;
+
+const ENHANCED_VIZ_CHAT_PROMPT = `${CORE_AGENT_IDENTITY}
+
+🎨 VISUALIZATION INTELLIGENCE MODE
+
+You are an expert data visualization consultant. For every query:
+
+1. DATA-TO-VISUAL MAPPING:
+   - Select chart type based on data characteristics and analytical goal
+   - Configure optimal encodings (position, color, size, shape)
+   - Apply perceptual best practices
+
+2. CHART RECOMMENDATIONS BY GOAL:
+   - Comparison: Bar, Column, Bullet
+   - Trend: Line, Area, Sparkline
+   - Part-to-whole: Pie, Treemap, Waterfall
+   - Distribution: Histogram, Box plot, Violin
+   - Relationship: Scatter, Bubble, Network
+   - Geospatial: Choropleth, Point map
+
+3. DASHBOARD THINKING:
+   - Suggest related visualizations
+   - Recommend filter interactions
+   - Propose drill-down hierarchies`;
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
 const sanitizeForPrompt = (input: string | undefined | null, maxLength = 200): string => {
   if (!input) return '';
   return String(input)
@@ -29,7 +485,6 @@ const sanitizeForPrompt = (input: string | undefined | null, maxLength = 200): s
     .trim();
 };
 
-// Validate and sanitize input
 const validateInput = (body: any): { valid: boolean; error?: string; sanitized?: any } => {
   if (!body || typeof body !== 'object') {
     return { valid: false, error: 'Request body must be a JSON object' };
@@ -38,12 +493,10 @@ const validateInput = (body: any): { valid: boolean; error?: string; sanitized?:
   const { action, data, datasetName, question, conversationHistory, projectDetails, 
           projectGoals, projectStatus, columns, columnTypes, dataSummary, query, dataContext } = body;
 
-  // Validate action
   if (!action || !VALID_ACTIONS.includes(action)) {
     return { valid: false, error: `Invalid action. Must be one of: ${VALID_ACTIONS.join(', ')}` };
   }
 
-  // Validate data array if present
   if (data !== undefined) {
     if (!Array.isArray(data)) {
       return { valid: false, error: 'Data must be an array' };
@@ -51,7 +504,6 @@ const validateInput = (body: any): { valid: boolean; error?: string; sanitized?:
     if (data.length > MAX_DATA_ROWS) {
       return { valid: false, error: `Data exceeds maximum of ${MAX_DATA_ROWS} rows` };
     }
-    // Validate each item is an object
     for (let i = 0; i < data.length; i++) {
       if (typeof data[i] !== 'object' || data[i] === null) {
         return { valid: false, error: `Data item at index ${i} must be an object` };
@@ -59,7 +511,6 @@ const validateInput = (body: any): { valid: boolean; error?: string; sanitized?:
     }
   }
 
-  // Validate conversation history
   if (conversationHistory !== undefined) {
     if (!Array.isArray(conversationHistory)) {
       return { valid: false, error: 'Conversation history must be an array' };
@@ -69,7 +520,6 @@ const validateInput = (body: any): { valid: boolean; error?: string; sanitized?:
     }
   }
 
-  // Validate columns array
   if (columns !== undefined) {
     if (!Array.isArray(columns)) {
       return { valid: false, error: 'Columns must be an array' };
@@ -79,7 +529,6 @@ const validateInput = (body: any): { valid: boolean; error?: string; sanitized?:
     }
   }
 
-  // Return sanitized inputs
   return {
     valid: true,
     sanitized: {
@@ -100,70 +549,101 @@ const validateInput = (body: any): { valid: boolean; error?: string; sanitized?:
   };
 };
 
+// Generate data statistics for context
+const generateDataContext = (data: any[]): string => {
+  if (!data || data.length === 0) return "No data provided";
+  
+  const columns = Object.keys(data[0]);
+  const stats: Record<string, any> = {};
+  
+  columns.forEach(col => {
+    const values = data.map(row => row[col]).filter(v => v != null);
+    const numericValues = values.filter(v => typeof v === 'number' || !isNaN(parseFloat(v)));
+    
+    stats[col] = {
+      count: values.length,
+      missing: data.length - values.length,
+      unique: new Set(values.map(v => String(v))).size,
+    };
+    
+    if (numericValues.length > 0) {
+      const nums = numericValues.map(v => parseFloat(v));
+      stats[col].min = Math.min(...nums);
+      stats[col].max = Math.max(...nums);
+      stats[col].mean = nums.reduce((a, b) => a + b, 0) / nums.length;
+      stats[col].type = 'numeric';
+    } else {
+      stats[col].type = 'categorical';
+      stats[col].topValues = [...new Set(values)].slice(0, 5);
+    }
+  });
+  
+  return JSON.stringify({ rowCount: data.length, columnCount: columns.length, columns: stats }, null, 2);
+};
+
+// ============================================================================
+// MAIN REQUEST HANDLER
+// ============================================================================
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Check payload size
     const contentLength = req.headers.get('content-length');
     if (contentLength && parseInt(contentLength) > MAX_PAYLOAD_SIZE) {
-      console.error('[DataAgent] Payload too large:', contentLength);
+      console.error('[DataForge] Payload too large:', contentLength);
       return new Response(
         JSON.stringify({ error: 'Payload too large. Maximum size is 5MB.' }),
         { status: 413, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Verify authentication
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      console.error('[DataAgent] Missing authorization header');
+      console.error('[DataForge] Missing authorization header');
       return new Response(
         JSON.stringify({ error: 'Missing authorization header' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Create authenticated Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
     if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
-      console.error('[DataAgent] Missing Supabase configuration');
+      console.error('[DataForge] Missing Supabase configuration');
       return new Response(
         JSON.stringify({ error: 'Server configuration error' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Use service role client to verify the JWT token
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-    
-    // Extract the token from the header
     const token = authHeader.replace('Bearer ', '');
     
-    // Verify user using the token
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
     if (authError || !user) {
-      console.error('[DataAgent] Authentication failed:', authError?.message || 'No user found');
+      console.error('[DataForge] Authentication failed:', authError?.message || 'No user found');
       return new Response(
         JSON.stringify({ error: 'Unauthorized. Please log in to continue.' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log(`[DataAgent] Authenticated user: ${user.id}`);
+    console.log(`[DataForge] Authenticated user: ${user.id}`);
 
-    // Parse request body first to get action for rate limiting
     const body = await req.json();
     const action = body?.action || 'unknown';
 
-    // Rate limiting configuration per action type
     const RATE_LIMITS: Record<string, { maxRequests: number; windowMinutes: number }> = {
       'analyze': { maxRequests: 20, windowMinutes: 60 },
+      'advanced-analysis': { maxRequests: 15, windowMinutes: 60 },
+      'predictive-modeling': { maxRequests: 10, windowMinutes: 60 },
+      'anomaly-detection': { maxRequests: 15, windowMinutes: 60 },
+      'correlation-matrix': { maxRequests: 20, windowMinutes: 60 },
       'clean': { maxRequests: 30, windowMinutes: 60 },
       'validate': { maxRequests: 50, windowMinutes: 60 },
       'generate-report': { maxRequests: 10, windowMinutes: 60 },
@@ -175,7 +655,6 @@ serve(async (req) => {
 
     const rateLimit = RATE_LIMITS[action] || { maxRequests: 30, windowMinutes: 60 };
 
-    // Check rate limit using database function
     const { data: rateLimitOk, error: rateLimitError } = await supabaseAdmin.rpc(
       'check_rate_limit',
       {
@@ -187,10 +666,9 @@ serve(async (req) => {
     );
 
     if (rateLimitError) {
-      console.error('[DataAgent] Rate limit check error:', rateLimitError.message);
-      // Continue without rate limiting if check fails
+      console.error('[DataForge] Rate limit check error:', rateLimitError.message);
     } else if (rateLimitOk === false) {
-      console.warn(`[DataAgent] Rate limit exceeded for user ${user.id} on action ${action}`);
+      console.warn(`[DataForge] Rate limit exceeded for user ${user.id} on action ${action}`);
       return new Response(
         JSON.stringify({ 
           error: `Rate limit exceeded. You can make ${rateLimit.maxRequests} ${action} requests per hour. Please try again later.`,
@@ -207,13 +685,12 @@ serve(async (req) => {
       );
     }
 
-    console.log(`[DataAgent] Rate limit check passed for user ${user.id} on action ${action}`);
+    console.log(`[DataForge] Rate limit check passed for user ${user.id} on action ${action}`);
 
-    // Validate request body
     const validation = validateInput(body);
     
     if (!validation.valid) {
-      console.error('[DataAgent] Validation error:', validation.error);
+      console.error('[DataForge] Validation error:', validation.error);
       return new Response(
         JSON.stringify({ error: validation.error }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -229,95 +706,150 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log(`[DataAgent] Processing action: ${action} for dataset: ${datasetName} by user: ${user.id}`);
-    console.log(`[DataAgent] Data rows: ${data?.length || 0}, Columns: ${columns?.length || 0}`);
+    console.log(`[DataForge] Processing action: ${action} for dataset: ${datasetName} by user: ${user.id}`);
+    console.log(`[DataForge] Data rows: ${data?.length || 0}, Columns: ${columns?.length || 0}`);
+
+    // Generate enhanced data context for AI
+    const enhancedDataContext = generateDataContext(data);
 
     let systemPrompt = "";
     let userPrompt = "";
 
     switch (action) {
+      // ========== NEW ADVANCED ACTIONS ==========
+      case "advanced-analysis":
+        systemPrompt = ADVANCED_ANALYSIS_PROMPT;
+        userPrompt = `Perform advanced analysis on dataset "${datasetName}":
+
+DATA CONTEXT:
+${enhancedDataContext}
+
+SAMPLE DATA (first 50 rows):
+${JSON.stringify(data?.slice(0, 50), null, 2)}
+
+Provide enterprise-grade insights with statistical rigor.`;
+        break;
+
+      case "predictive-modeling":
+        systemPrompt = PREDICTIVE_MODELING_PROMPT;
+        userPrompt = `Generate predictive analytics for dataset "${datasetName}":
+
+DATA CONTEXT:
+${enhancedDataContext}
+
+SAMPLE DATA:
+${JSON.stringify(data?.slice(0, 50), null, 2)}
+
+Provide predictions, model recommendations, and forecasts.`;
+        break;
+
+      case "anomaly-detection":
+        systemPrompt = ANOMALY_DETECTION_PROMPT;
+        userPrompt = `Detect anomalies in dataset "${datasetName}":
+
+DATA CONTEXT:
+${enhancedDataContext}
+
+FULL DATA (for anomaly detection):
+${JSON.stringify(data, null, 2)}
+
+Identify all anomalies with root cause analysis.`;
+        break;
+
+      case "correlation-matrix":
+        systemPrompt = CORRELATION_MATRIX_PROMPT;
+        userPrompt = `Analyze correlations in dataset "${datasetName}":
+
+DATA CONTEXT:
+${enhancedDataContext}
+
+SAMPLE DATA:
+${JSON.stringify(data?.slice(0, 100), null, 2)}
+
+Provide correlation matrix with causal indicators.`;
+        break;
+
+      // ========== ENHANCED EXISTING ACTIONS ==========
       case "clean":
-        systemPrompt = `You are an expert data cleaning AI agent with 99% accuracy. Your job is to:
-1. Identify and fix data quality issues (missing values, duplicates, inconsistent formats)
-2. Standardize data formats (dates, numbers, text)
-3. Detect and handle outliers appropriately
-4. Provide a detailed summary of all cleaning operations performed
+        systemPrompt = ENHANCED_CLEAN_PROMPT;
+        userPrompt = `Clean this dataset named "${datasetName}" with ${data?.length || 0} rows:
 
-CRITICAL REQUIREMENTS:
-- Preserve data integrity - never lose valid data
-- Handle edge cases gracefully
-- Provide confidence scores for each cleaning operation
+DATA CONTEXT:
+${enhancedDataContext}
 
-Return a JSON object with:
-- "cleanedData": the cleaned dataset as an array of objects
-- "cleaningReport": { "issuesFound": ["string descriptions"], "actionsTaken": ["string descriptions"], "rowsAffected": number }
-- "dataQualityScore": number between 0-100
-- "confidence": number between 0-100
-
-IMPORTANT: All items in issuesFound and actionsTaken arrays must be plain strings, not objects.`;
-        userPrompt = `Clean this dataset named "${datasetName}" with ${data?.length || 0} rows:\n${JSON.stringify(data, null, 2)}`;
+RAW DATA:
+${JSON.stringify(data, null, 2)}`;
         break;
 
       case "validate":
-        systemPrompt = `You are an expert data validation AI agent with 99% accuracy. Your job is to:
-1. Check data types and formats for each column
-2. Identify missing or null values
-3. Check for data integrity issues
-4. Validate data ranges and constraints
-5. Identify potential duplicates
+        systemPrompt = `${CORE_AGENT_IDENTITY}
 
-ACCURACY TARGET: >99%
+🔍 DATA VALIDATION MODE
 
-Return a JSON object with:
-- "isValid": boolean
-- "validationReport": { "errors": ["string descriptions"], "warnings": ["string descriptions"], "suggestions": ["string descriptions"] }
-- "columnStats": { columnName: { type: "string", nullCount: number, uniqueCount: number, issues: ["string descriptions"] } }
-- "confidence": number between 0-100
+Perform comprehensive data validation with:
+1. Schema validation - data types, constraints
+2. Business rule validation - logical consistency
+3. Referential integrity - cross-field dependencies
+4. Data quality metrics - completeness, accuracy, consistency
 
-IMPORTANT: All items in errors, warnings, and suggestions arrays must be plain strings, not objects.`;
-        userPrompt = `Validate this dataset named "${datasetName}":\n${JSON.stringify(data, null, 2)}`;
+Return JSON with:
+{
+  "isValid": boolean,
+  "qualityScore": number,
+  "validationReport": {
+    "errors": [{ "type", "column", "row", "description", "severity" }],
+    "warnings": [{ "type", "description", "affectedRows" }],
+    "suggestions": []
+  },
+  "columnStats": {},
+  "businessRuleViolations": [],
+  "confidence": number
+}`;
+        userPrompt = `Validate dataset "${datasetName}":
+
+DATA CONTEXT:
+${enhancedDataContext}
+
+DATA:
+${JSON.stringify(data, null, 2)}`;
         break;
 
       case "analyze":
-        systemPrompt = `You are an expert data analysis AI agent with advanced statistical capabilities. Your job is to:
-1. Perform comprehensive statistical analysis
-2. Identify patterns, trends, and correlations
-3. Generate actionable insights with confidence scores
-4. Provide specific, data-driven recommendations
+        systemPrompt = ENHANCED_ANALYZE_PROMPT;
+        userPrompt = `Analyze dataset "${datasetName}" with ${data?.length || 0} rows:
 
-ACCURACY TARGET: >98%
+DATA CONTEXT:
+${enhancedDataContext}
 
-Return a JSON object with:
-- "summary": brief text summary of findings (be specific with numbers)
-- "statistics": { descriptive stats for each column with exact values }
-- "insights": [{ "title": string, "description": string, "importance": "high"|"medium"|"low", "confidence": number }]
-- "patterns": [{ "name": string, "description": string, "strength": number }]
-- "recommendations": [{ "action": string, "reason": string, "priority": "high"|"medium"|"low" }]
-- "overallConfidence": number between 0-100`;
-        userPrompt = `Analyze this dataset named "${datasetName}" with ${data?.length || 0} rows and provide detailed insights:\n${JSON.stringify(data, null, 2)}`;
+SAMPLE DATA:
+${JSON.stringify(data?.slice(0, 50), null, 2)}
+
+Provide comprehensive analysis with actionable insights.`;
         break;
 
       case "generate-report":
-        systemPrompt = `You are an expert business report generator AI. Create comprehensive, professional project reports with high accuracy.
+        systemPrompt = ENHANCED_REPORT_PROMPT + `
 
-Return a JSON object with:
-- "title": string (professional report title)
-- "executiveSummary": string (2-3 paragraph executive summary with specific numbers)
-- "introduction": string (introduction to the analysis)
-- "objectives": ["objective 1", "objective 2", ...] (list of project objectives)
-- "problemStatement": string (the problem being addressed)
-- "methodology": string (description of analysis methodology)
-- "toolsAndTechnologies": ["tool 1", "tool 2", ...] (tools used)
-- "implementationSteps": ["step 1", "step 2", ...] (implementation steps)
-- "keyFindings": ["finding 1", "finding 2", ...] (key findings with specific data)
-- "recommendations": ["recommendation 1", "recommendation 2", ...] (actionable recommendations)
-- "conclusion": string (conclusion paragraph)
-- "futureScope": ["scope 1", "scope 2", ...] (future possibilities)
-
-Make the report professional, detailed, and data-driven.
-IMPORTANT: All array items must be plain strings, not objects. Include specific numbers from the data.`;
+Return JSON with:
+{
+  "title": string,
+  "executiveSummary": string,
+  "keyMetrics": [{ "name", "value", "change", "status" }],
+  "introduction": string,
+  "objectives": [],
+  "problemStatement": string,
+  "methodology": string,
+  "toolsAndTechnologies": [],
+  "implementationSteps": [],
+  "keyFindings": [{ "finding", "evidence", "impact" }],
+  "recommendations": [{ "action", "priority", "timeline", "owner" }],
+  "conclusion": string,
+  "futureScope": [],
+  "riskAssessment": [],
+  "appendix": {}
+}`;
         
-        userPrompt = `Generate a comprehensive project report for:
+        userPrompt = `Generate executive report for:
 Dataset: ${datasetName}
 Columns: ${columns?.join(", ") || "Not specified"}
 Records: ${data?.length || 0}
@@ -325,40 +857,50 @@ Project Status: ${projectStatus || "In Progress"}
 Project Details: ${projectDetails || "Data analysis project"}
 Project Goals: ${projectGoals || "Analyze data and provide insights"}
 
+DATA CONTEXT:
+${enhancedDataContext}
+
 Sample Data:
 ${JSON.stringify(data?.slice(0, 10), null, 2)}`;
         break;
 
       case "visualization-chat":
-        systemPrompt = `You are an expert data visualization AI assistant with 99% accuracy. Help users understand their data and suggest the best visualizations.
-Dataset: "${datasetName}"
-Data Summary: ${dataSummary || "Not provided"}
+        const vizSystemPrompt = ENHANCED_VIZ_CHAT_PROMPT + `
 
-Provide insights, chart recommendations, and answer questions about data patterns. Be specific with numbers from the data.
+Dataset: "${datasetName}"
+Data Summary: ${dataSummary || enhancedDataContext}
 
 Return JSON with:
-- "answer": your response text (use markdown, be specific with numbers)
-- "suggestions": array of follow-up question suggestions
-- "chartSuggestion": optional { "type": "bar"|"line"|"pie"|"area"|"scatter", "xAxis": column, "yAxis": column }
-- "confidence": number between 0-100`;
+{
+  "answer": string (markdown formatted, specific numbers),
+  "suggestions": array of follow-up questions,
+  "chartSuggestion": { "type", "xAxis", "yAxis", "title", "rationale" },
+  "additionalCharts": [],
+  "insights": [],
+  "confidence": number
+}`;
 
         const vizMessages = [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: vizSystemPrompt },
           ...(conversationHistory || []),
           { role: "user", content: question }
         ];
 
-        console.log("[DataAgent] Sending visualization-chat request");
+        console.log("[DataForge] Sending visualization-chat request");
         
         const vizResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
           headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: "google/gemini-2.5-flash", messages: vizMessages, response_format: { type: "json_object" } }),
+          body: JSON.stringify({ 
+            model: "google/gemini-2.5-flash", 
+            messages: vizMessages, 
+            response_format: { type: "json_object" } 
+          }),
         });
 
         if (!vizResponse.ok) {
           const errorText = await vizResponse.text();
-          console.error("[DataAgent] Visualization chat error:", vizResponse.status, errorText);
+          console.error("[DataForge] Visualization chat error:", vizResponse.status, errorText);
           if (vizResponse.status === 429) {
             return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
               status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -380,63 +922,76 @@ Return JSON with:
           vizResult = { answer: vizData.choices[0].message.content, suggestions: [], confidence: 85 };
         }
         
-        console.log("[DataAgent] Visualization chat response successful");
+        console.log("[DataForge] Visualization chat response successful");
         
         return new Response(JSON.stringify(vizResult), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
 
       case "generate-visualization-report":
-        systemPrompt = `You are an expert data visualization report generator with 99% accuracy. Create comprehensive insights for visualization reports.
+        systemPrompt = `${CORE_AGENT_IDENTITY}
 
-Be specific with actual numbers from the data provided.
+📊 VISUALIZATION REPORT MODE
+
+Generate comprehensive visualization insights:
 
 Return JSON with:
-- "summary": executive summary of data analysis (include specific numbers)
-- "insights": [{ "type": "insight"|"warning"|"opportunity"|"recommendation", "title": string, "description": string, "impact": "high"|"medium"|"low", "confidence": number, "category": string }]
-- "recommendations": array of visualization recommendation strings
-- "overallConfidence": number between 0-100`;
+{
+  "summary": string,
+  "insights": [{
+    "type": "insight|warning|opportunity|recommendation",
+    "title": string,
+    "description": string,
+    "impact": "high|medium|low",
+    "confidence": number,
+    "category": string,
+    "visualization": { "chartType", "config" }
+  }],
+  "dashboardLayout": [{
+    "position": { "row", "col", "width", "height" },
+    "chartType": string,
+    "title": string,
+    "dataMapping": {}
+  }],
+  "recommendations": [],
+  "overallConfidence": number
+}`;
 
         userPrompt = `Generate visualization insights for dataset "${datasetName}":
-${dataSummary}`;
+${dataSummary || enhancedDataContext}`;
         break;
 
       case "nlp-query":
-        console.log(`[DataAgent] Processing NLP query: ${query}`);
-        console.log(`[DataAgent] Data context length: ${dataContext?.length || 0} chars`);
+        console.log(`[DataForge] Processing NLP query: ${query}`);
+        console.log(`[DataForge] Data context length: ${dataContext?.length || 0} chars`);
         
-        const nlpSystemPrompt = `You are an expert Natural Language Processing engine for data analytics with >98% accuracy target.
-Your job is to understand user questions about data and provide PRECISE, ACTIONABLE answers with SPECIFIC NUMBERS.
+        const nlpSystemPrompt = ENHANCED_NLP_PROMPT + `
 
 Dataset: "${datasetName}"
-Data Context: ${dataContext || "Not provided"}
+Data Context: ${dataContext || enhancedDataContext}
 Available Columns: ${columns?.join(", ") || "Not specified"}
 Column Types: ${JSON.stringify(columnTypes) || "Not specified"}
 
-ACCURACY REQUIREMENTS:
-1. ALWAYS use specific numbers from the data context
-2. Never make up statistics - only use what's in the data
-3. Clearly state confidence levels
-4. Acknowledge when data is insufficient
-
-CAPABILITIES:
-1. Trend Analysis - Identify patterns and trends with specific metrics
-2. Anomaly Detection - Find outliers with exact values
-3. Correlation Analysis - Discover relationships with correlation coefficients
-4. Summarization - Provide key metrics with precise numbers
-5. Chart Recommendations - Suggest appropriate visualizations with rationale
-6. Predictive Insights - Make predictions with confidence intervals
-
 RESPONSE FORMAT - Return JSON with:
-- "answer": string (detailed, accurate response - use markdown formatting, INCLUDE SPECIFIC NUMBERS)
-- "confidence": number (85-99, your confidence level based on data quality)
-- "charts": array of { "type": "bar"|"line"|"pie"|"area"|"scatter", "title": string, "xAxis": string, "yAxis": string, "description": string }
-- "insights": array of strings (key insights with specific metrics)
-- "actions": array of { "label": string, "action": string, "type": "chart"|"filter"|"export"|"analyze" }
-- "queryType": string ("trend"|"anomaly"|"correlation"|"summary"|"prediction"|"dashboard"|"general")
-- "dataQuality": string ("high"|"medium"|"low" - assessment of data quality for this query)
-
-Be SPECIFIC with numbers. Format your answer with markdown for readability.`;
+{
+  "answer": string (detailed markdown response with SPECIFIC NUMBERS),
+  "confidence": number (85-99),
+  "queryType": "explore|compare|explain|predict|recommend|aggregate|filter",
+  "intent": { "primary": string, "entities": [], "filters": [] },
+  "charts": [{
+    "type": "bar|line|pie|area|scatter|heatmap|treemap",
+    "title": string,
+    "xAxis": string,
+    "yAxis": string,
+    "description": string,
+    "priority": number
+  }],
+  "insights": [],
+  "actions": [{ "label", "action", "type": "chart|filter|export|analyze|drill-down" }],
+  "followUpQuestions": [],
+  "dataQuality": "high|medium|low",
+  "limitations": []
+}`;
 
         const nlpMessages = [
           { role: "system", content: nlpSystemPrompt },
@@ -444,7 +999,7 @@ Be SPECIFIC with numbers. Format your answer with markdown for readability.`;
           { role: "user", content: query }
         ];
 
-        console.log("[DataAgent] Sending NLP query to AI gateway");
+        console.log("[DataForge] Sending NLP query to AI gateway");
         
         const nlpResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -461,7 +1016,7 @@ Be SPECIFIC with numbers. Format your answer with markdown for readability.`;
 
         if (!nlpResponse.ok) {
           const errorText = await nlpResponse.text();
-          console.error("[DataAgent] NLP AI gateway error:", nlpResponse.status, errorText);
+          console.error("[DataForge] NLP AI gateway error:", nlpResponse.status, errorText);
           if (nlpResponse.status === 429) {
             return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
               status: 429,
@@ -478,20 +1033,21 @@ Be SPECIFIC with numbers. Format your answer with markdown for readability.`;
         }
 
         const nlpData = await nlpResponse.json();
-        console.log("[DataAgent] NLP response received successfully");
+        console.log("[DataForge] NLP response received successfully");
         
         let nlpResult;
         try {
           nlpResult = JSON.parse(nlpData.choices[0].message.content);
         } catch {
-          console.warn("[DataAgent] Failed to parse NLP response as JSON");
+          console.warn("[DataForge] Failed to parse NLP response as JSON");
           nlpResult = { 
             answer: nlpData.choices[0].message.content, 
             confidence: 85,
+            queryType: "explore",
             charts: [],
             insights: [],
             actions: [],
-            queryType: "general",
+            followUpQuestions: [],
             dataQuality: "medium"
           };
         }
@@ -501,23 +1057,26 @@ Be SPECIFIC with numbers. Format your answer with markdown for readability.`;
         });
 
       case "chat":
-        systemPrompt = `You are a helpful AI assistant specialized in data analysis with high accuracy. 
-Be precise, use specific numbers from the data, and provide actionable insights.
-Dataset: "${datasetName}"
+        const chatSystemPrompt = `${CORE_AGENT_IDENTITY}
 
-ACCURACY REQUIREMENTS:
-- Always reference specific data points
-- Provide confidence levels for insights
-- Acknowledge limitations when data is insufficient`;
+💬 CONVERSATIONAL ANALYTICS MODE
+
+You are having a natural conversation about data analysis. Be:
+- Specific with numbers
+- Proactive with insights
+- Suggestive of next steps
+
+Dataset: "${datasetName}"
+Data Preview: ${data?.length || 0} rows`;
         
         const messages = [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: `Dataset with ${data?.length || 0} rows:\n${JSON.stringify(data?.slice(0, 50), null, 2)}` },
+          { role: "system", content: chatSystemPrompt },
+          { role: "user", content: `Dataset context:\n${enhancedDataContext}\n\nSample data:\n${JSON.stringify(data?.slice(0, 20), null, 2)}` },
           ...(conversationHistory || []),
           { role: "user", content: question }
         ];
 
-        console.log("[DataAgent] Sending chat request");
+        console.log("[DataForge] Sending chat request");
         
         const chatResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -527,7 +1086,7 @@ ACCURACY REQUIREMENTS:
 
         if (!chatResponse.ok) {
           const errorText = await chatResponse.text();
-          console.error("[DataAgent] Chat error:", chatResponse.status, errorText);
+          console.error("[DataForge] Chat error:", chatResponse.status, errorText);
           if (chatResponse.status === 429) {
             return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
               status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -542,7 +1101,7 @@ ACCURACY REQUIREMENTS:
         }
 
         const chatData = await chatResponse.json();
-        console.log("[DataAgent] Chat response successful");
+        console.log("[DataForge] Chat response successful");
         
         return new Response(JSON.stringify({ 
           response: chatData.choices[0].message.content 
@@ -551,12 +1110,12 @@ ACCURACY REQUIREMENTS:
         });
 
       default:
-        console.error(`[DataAgent] Unknown action: ${action}`);
+        console.error(`[DataForge] Unknown action: ${action}`);
         throw new Error(`Unknown action: ${action}`);
     }
 
-    // For non-chat actions
-    console.log(`[DataAgent] Sending ${action} request to AI gateway`);
+    // For non-chat actions that haven't returned yet
+    console.log(`[DataForge] Sending ${action} request to AI gateway`);
     
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -576,7 +1135,7 @@ ACCURACY REQUIREMENTS:
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("[DataAgent] AI gateway error:", response.status, errorText);
+      console.error("[DataForge] AI gateway error:", response.status, errorText);
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }), {
           status: 429,
@@ -595,13 +1154,13 @@ ACCURACY REQUIREMENTS:
     const aiData = await response.json();
     const content = aiData.choices[0].message.content;
     
-    console.log(`[DataAgent] ${action} response received successfully`);
+    console.log(`[DataForge] ${action} response received successfully`);
     
     let result;
     try {
       result = JSON.parse(content);
     } catch {
-      console.warn("[DataAgent] Failed to parse AI response as JSON, returning raw content");
+      console.warn("[DataForge] Failed to parse AI response as JSON, returning raw content");
       result = { rawResponse: content };
     }
 
@@ -610,7 +1169,7 @@ ACCURACY REQUIREMENTS:
     });
 
   } catch (error) {
-    console.error("[DataAgent] Error:", error);
+    console.error("[DataForge] Error:", error);
     return new Response(JSON.stringify({ 
       error: "An unexpected error occurred. Please try again." 
     }), {
