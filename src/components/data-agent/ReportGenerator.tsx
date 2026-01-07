@@ -488,6 +488,7 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
   const handleTemplateSelect = (template: PDFTemplate) => {
     setSelectedTemplate(template);
     exportToPDF(template);
+    setShowTemplateSelector(false);
   };
 
   return (
@@ -600,9 +601,16 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
           </div>
 
           {isGenerating && (
-            <div className="space-y-2 animate-fade-in">
+            <div className="space-y-3 animate-fade-in">
+              <div className="flex flex-col items-center justify-center py-4 gap-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+                  <span className="text-lg font-medium text-primary">We are creating a perfect report</span>
+                </div>
+                <span className="text-sm text-muted-foreground">Please wait a while...</span>
+              </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Generating comprehensive report...</span>
+                <span className="text-muted-foreground">Processing your data...</span>
                 <span className="font-medium">{generationProgress}%</span>
               </div>
               <Progress value={generationProgress} className="h-2" />

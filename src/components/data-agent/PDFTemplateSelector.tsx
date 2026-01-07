@@ -177,10 +177,18 @@ const PDFTemplateSelector = ({
   selectedTemplateId,
 }: PDFTemplateSelectorProps) => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [localSelectedId, setLocalSelectedId] = useState<string | undefined>(selectedTemplateId);
 
-  const handleSelect = (template: PDFTemplate) => {
-    onSelectTemplate(template);
-    onOpenChange(false);
+  const handleTemplateClick = (template: PDFTemplate) => {
+    setLocalSelectedId(template.id);
+  };
+
+  const handleConfirmAndDownload = () => {
+    const template = PDF_TEMPLATES.find((t) => t.id === localSelectedId);
+    if (template) {
+      onSelectTemplate(template);
+      onOpenChange(false);
+    }
   };
 
   return (
@@ -199,7 +207,7 @@ const PDFTemplateSelector = ({
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
           {PDF_TEMPLATES.map((template) => {
             const Icon = template.icon;
-            const isSelected = selectedTemplateId === template.id;
+            const isSelected = localSelectedId === template.id;
             const isHovered = hoveredId === template.id;
 
             return (
@@ -212,7 +220,7 @@ const PDFTemplateSelector = ({
                 )}
                 onMouseEnter={() => setHoveredId(template.id)}
                 onMouseLeave={() => setHoveredId(null)}
-                onClick={() => handleSelect(template)}
+                onClick={() => handleTemplateClick(template)}
               >
                 {/* Color Preview Header */}
                 <div
@@ -283,11 +291,8 @@ const PDFTemplateSelector = ({
             Cancel
           </Button>
           <Button
-            onClick={() => {
-              const template = PDF_TEMPLATES.find((t) => t.id === selectedTemplateId);
-              if (template) handleSelect(template);
-            }}
-            disabled={!selectedTemplateId}
+            onClick={handleConfirmAndDownload}
+            disabled={!localSelectedId}
           >
             <FileDown className="h-4 w-4 mr-2" />
             Export with Template

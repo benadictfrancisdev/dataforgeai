@@ -72,7 +72,7 @@ interface PowerBIDashboardProps {
 
 interface DashboardTile {
   id: string;
-  type: "kpi" | "bar" | "line" | "pie" | "area" | "scatter" | "combo" | "table";
+  type: "kpi" | "bar" | "line" | "pie" | "area" | "scatter" | "combo" | "table" | "radar" | "funnel" | "waterfall" | "heatmap" | "gauge" | "treemap" | "histogram" | "boxplot";
   title: string;
   size: "small" | "medium" | "large";
   column?: string;
@@ -82,6 +82,7 @@ interface DashboardTile {
   value?: number;
   change?: number;
   color?: string;
+  secondaryData?: any[];
 }
 
 interface DataTransformation {
@@ -453,6 +454,211 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
         });
       }
 
+      // Scatter plot for correlation analysis
+      if (activeNumericCols.length >= 2) {
+        const xCol = activeNumericCols[0];
+        const yCol = activeNumericCols[1];
+        const scatterData = dataToUse.slice(0, 100).map(row => ({
+          x: Number(row[xCol]) || 0,
+          y: Number(row[yCol]) || 0,
+          name: `(${Number(row[xCol])?.toFixed(1)}, ${Number(row[yCol])?.toFixed(1)})`
+        }));
+
+        newTiles.push({
+          id: `scatter-${xCol}-${yCol}`,
+          type: "scatter",
+          title: `${xCol} vs ${yCol} Correlation`,
+          size: "medium",
+          xAxis: xCol,
+          yAxis: yCol,
+          data: scatterData,
+          color: POWER_BI_COLORS[5]
+        });
+      }
+
+      // Histogram for distribution analysis
+      if (activeNumericCols.length > 0) {
+        const col = activeNumericCols[Math.min(2, activeNumericCols.length - 1)];
+        const values = dataToUse.map(row => Number(row[col])).filter(v => !isNaN(v));
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+        const binCount = 10;
+        const binSize = (max - min) / binCount || 1;
+        
+        const bins: Record<string, number> = {};
+        for (let i = 0; i < binCount; i++) {
+          const binStart = min + i * binSize;
+          const binLabel = `${binStart.toFixed(1)}-${(binStart + binSize).toFixed(1)}`;
+          bins[binLabel] = 0;
+        }
+        
+        values.forEach(val => {
+          const binIndex = Math.min(Math.floor((val - min) / binSize), binCount - 1);
+          const binStart = min + binIndex * binSize;
+          const binLabel = `${binStart.toFixed(1)}-${(binStart + binSize).toFixed(1)}`;
+          bins[binLabel] = (bins[binLabel] || 0) + 1;
+        });
+
+        const histogramData = Object.entries(bins).map(([name, count]) => ({ name, value: count }));
+
+        newTiles.push({
+          id: `histogram-${col}`,
+          type: "histogram",
+          title: `${col} Distribution`,
+          size: "medium",
+          column: col,
+          data: histogramData,
+          color: POWER_BI_COLORS[6]
+        });
+      }
+
+      // Gauge chart for key metrics
+      if (activeNumericCols.length > 0) {
+        const col = activeNumericCols[0];
+        const values = dataToUse.map(row => Number(row[col])).filter(v => !isNaN(v));
+        const avg = values.reduce((a, b) => a + b, 0) / values.length;
+        const max = Math.max(...values);
+        const percentage = (avg / max) * 100;
+
+        newTiles.push({
+          id: `gauge-${col}`,
+          type: "gauge",
+          title: `${col} Performance`,
+          size: "small",
+          column: col,
+          value: percentage,
+          data: [{ value: avg, max }],
+          color: POWER_BI_COLORS[7]
+        });
+      }
+
+      // Treemap for hierarchical data
+      if (activeCategoricalCols.length >= 2 && activeNumericCols.length > 0) {
+        const cat1 = activeCategoricalCols[0];
+        const cat2 = activeCategoricalCols[1];
+        const numCol = activeNumericCols[0];
+
+        const grouped = dataToUse.reduce((acc: Record<string, Record<string, number>>, row) => {
+          const key1 = String(row[cat1]);
+          const key2 = String(row[cat2]);
+          if (!acc[key1]) acc[key1] = {};
+          const val = Number(row[numCol]);
+          if (!isNaN(val)) {
+            acc[key1][key2] = (acc[key1][key2] || 0) + val;
+          }
+          return acc;
+        }, {});
+
+        const treemapData = Object.entries(grouped).slice(0, 6).flatMap(([parent, children]) => 
+          Object.entries(children).slice(0, 4).map(([name, value]) => ({
+            name: `${parent}/${name}`,
+            value
+          }))
+        );
+
+        newTiles.push({
+          id: `treemap-${cat1}-${cat2}`,
+          type: "treemap",
+          title: `${numCol} by ${cat1} & ${cat2}`,
+          size: "large",
+          data: treemapData
+        });
+      }
+
+      // Funnel chart for sequential data
+      if (activeCategoricalCols.length > 0 && activeNumericCols.length > 0) {
+        const catCol = activeCategoricalCols[Math.min(1, activeCategoricalCols.length - 1)] || activeCategoricalCols[0];
+        const numCol = activeNumericCols[0];
+        
+        const grouped = dataToUse.reduce((acc: Record<string, number>, row) => {
+          const key = String(row[catCol]);
+          const val = Number(row[numCol]);
+          if (!isNaN(val)) {
+            acc[key] = (acc[key] || 0) + val;
+          }
+          return acc;
+        }, {});
+
+        const funnelData = Object.entries(grouped)
+          .sort((a, b) => (b[1] as number) - (a[1] as number))
+          .slice(0, 6)
+          .map(([name, value]) => ({ name, value: value as number }));
+
+        newTiles.push({
+          id: `funnel-${catCol}`,
+          type: "funnel",
+          title: `${numCol} Funnel by ${catCol}`,
+          size: "medium",
+          data: funnelData,
+          color: POWER_BI_COLORS[8]
+        });
+      }
+
+      // Waterfall chart for cumulative analysis
+      if (activeNumericCols.length > 0 && activeCategoricalCols.length > 0) {
+        const catCol = activeCategoricalCols[0];
+        const numCol = activeNumericCols[0];
+
+        const grouped = dataToUse.reduce((acc: Record<string, number[]>, row) => {
+          const key = String(row[catCol]);
+          if (!acc[key]) acc[key] = [];
+          const val = Number(row[numCol]);
+          if (!isNaN(val)) acc[key].push(val);
+          return acc;
+        }, {});
+
+        let cumulative = 0;
+        const waterfallData = Object.entries(grouped).slice(0, 8).map(([name, values]) => {
+          const valuesArr = values as number[];
+          const avg = valuesArr.reduce((a, b) => a + b, 0) / valuesArr.length;
+          const start = cumulative;
+          cumulative += avg;
+          return { name, value: avg, start, end: cumulative };
+        });
+
+        newTiles.push({
+          id: `waterfall-${catCol}`,
+          type: "waterfall",
+          title: `Cumulative ${numCol}`,
+          size: "large",
+          data: waterfallData,
+          color: POWER_BI_COLORS[9]
+        });
+      }
+
+      // Box plot for statistical distribution
+      if (activeNumericCols.length > 0 && activeCategoricalCols.length > 0) {
+        const catCol = activeCategoricalCols[0];
+        const numCol = activeNumericCols[0];
+
+        const grouped = dataToUse.reduce((acc: Record<string, number[]>, row) => {
+          const key = String(row[catCol]);
+          if (!acc[key]) acc[key] = [];
+          const val = Number(row[numCol]);
+          if (!isNaN(val)) acc[key].push(val);
+          return acc;
+        }, {});
+
+        const boxPlotData = Object.entries(grouped).slice(0, 6).map(([name, values]) => {
+          const valuesArr = (values as number[]).sort((a, b) => a - b);
+          const q1 = valuesArr[Math.floor(valuesArr.length * 0.25)] || 0;
+          const median = valuesArr[Math.floor(valuesArr.length * 0.5)] || 0;
+          const q3 = valuesArr[Math.floor(valuesArr.length * 0.75)] || 0;
+          const min = valuesArr[0] || 0;
+          const max = valuesArr[valuesArr.length - 1] || 0;
+          return { name, min, q1, median, q3, max };
+        });
+
+        newTiles.push({
+          id: `boxplot-${catCol}`,
+          type: "boxplot",
+          title: `${numCol} Stats by ${catCol}`,
+          size: "medium",
+          data: boxPlotData,
+          color: POWER_BI_COLORS[3]
+        });
+      }
+
       setTiles(newTiles);
       setIsGenerating(false);
       toast.success(`Generated ${newTiles.length} dashboard tiles using ${dataToUse.length} rows`);
@@ -598,6 +804,173 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
                   <Line type="monotone" dataKey={Object.keys(tile.data[0] || {})[2] || "value2"} stroke={POWER_BI_COLORS[2]} strokeWidth={2} />
                 </ComposedChart>
               </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Scatter Plot */}
+          {tile.type === "scatter" && tile.data && (
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <ScatterChart>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis type="number" dataKey="x" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" name={tile.xAxis} />
+                  <YAxis type="number" dataKey="y" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" name={tile.yAxis} />
+                  <Tooltip cursor={{ strokeDasharray: '3 3' }} />
+                  <Scatter data={tile.data} fill={tile.color || POWER_BI_COLORS[5]} />
+                </ScatterChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Histogram */}
+          {tile.type === "histogram" && tile.data && (
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={tile.data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis dataKey="name" tick={{ fontSize: 8 }} stroke="hsl(var(--muted-foreground))" angle={-45} textAnchor="end" height={50} />
+                  <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip />
+                  <Bar dataKey="value" fill={tile.color || POWER_BI_COLORS[6]} radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Gauge Chart */}
+          {tile.type === "gauge" && (
+            <div className="h-32 flex flex-col items-center justify-center">
+              <div className="relative w-32 h-16 overflow-hidden">
+                <div className="absolute inset-0 flex items-end justify-center">
+                  <div 
+                    className="w-32 h-32 rounded-full border-8 border-muted"
+                    style={{ 
+                      borderColor: `${tile.color || POWER_BI_COLORS[7]}20`,
+                      clipPath: 'polygon(0 50%, 100% 50%, 100% 100%, 0 100%)'
+                    }}
+                  />
+                </div>
+                <div className="absolute inset-0 flex items-end justify-center">
+                  <div 
+                    className="w-32 h-32 rounded-full border-8 transition-all duration-500"
+                    style={{ 
+                      borderColor: tile.color || POWER_BI_COLORS[7],
+                      clipPath: `polygon(0 50%, 100% 50%, 100% 100%, 0 100%)`,
+                      transform: `rotate(${((tile.value || 0) / 100) * 180 - 90}deg)`
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="text-2xl font-bold mt-2" style={{ color: tile.color || POWER_BI_COLORS[7] }}>
+                {tile.value?.toFixed(1)}%
+              </div>
+            </div>
+          )}
+
+          {/* Treemap */}
+          {tile.type === "treemap" && tile.data && (
+            <div className="h-48 grid grid-cols-4 gap-1 p-2">
+              {tile.data.slice(0, 16).map((item, idx) => {
+                const maxValue = Math.max(...tile.data!.map(d => d.value || 0));
+                const ratio = (item.value || 0) / maxValue;
+                return (
+                  <div
+                    key={idx}
+                    className="rounded flex items-center justify-center text-white text-xs font-medium p-1 truncate"
+                    style={{
+                      backgroundColor: POWER_BI_COLORS[idx % POWER_BI_COLORS.length],
+                      opacity: 0.5 + ratio * 0.5,
+                      gridColumn: ratio > 0.5 ? 'span 2' : 'span 1',
+                      gridRow: ratio > 0.7 ? 'span 2' : 'span 1'
+                    }}
+                    title={`${item.name}: ${item.value?.toFixed(2)}`}
+                  >
+                    {item.name?.split('/')[1] || item.name}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Funnel Chart */}
+          {tile.type === "funnel" && tile.data && (
+            <div className="h-48 flex flex-col justify-center space-y-1 px-4">
+              {tile.data.map((item, idx) => {
+                const maxValue = tile.data![0]?.value || 1;
+                const width = ((item.value || 0) / maxValue) * 100;
+                return (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div 
+                      className="h-6 rounded-r-full flex items-center justify-end pr-2 text-white text-xs font-medium transition-all"
+                      style={{
+                        width: `${width}%`,
+                        backgroundColor: POWER_BI_COLORS[idx % POWER_BI_COLORS.length],
+                        minWidth: '40px'
+                      }}
+                    >
+                      {item.value?.toFixed(0)}
+                    </div>
+                    <span className="text-xs text-muted-foreground truncate">{item.name}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Waterfall Chart */}
+          {tile.type === "waterfall" && tile.data && (
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={tile.data}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                  <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                  <Tooltip />
+                  <Bar dataKey="start" stackId="a" fill="transparent" />
+                  <Bar dataKey="value" stackId="a" fill={tile.color || POWER_BI_COLORS[9]} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Box Plot */}
+          {tile.type === "boxplot" && tile.data && (
+            <div className="h-48 flex items-end justify-around px-4 pb-6">
+              {tile.data.map((item, idx) => {
+                const maxVal = Math.max(...tile.data!.map(d => d.max || 0));
+                const scale = (val: number) => (val / maxVal) * 140;
+                return (
+                  <div key={idx} className="flex flex-col items-center relative" style={{ height: '100%' }}>
+                    {/* Whisker line */}
+                    <div 
+                      className="absolute w-px bg-muted-foreground"
+                      style={{
+                        bottom: `${scale(item.min || 0)}px`,
+                        height: `${scale((item.max || 0) - (item.min || 0))}px`
+                      }}
+                    />
+                    {/* Box */}
+                    <div 
+                      className="absolute w-8 rounded"
+                      style={{
+                        bottom: `${scale(item.q1 || 0)}px`,
+                        height: `${scale((item.q3 || 0) - (item.q1 || 0))}px`,
+                        backgroundColor: POWER_BI_COLORS[idx % POWER_BI_COLORS.length]
+                      }}
+                    />
+                    {/* Median line */}
+                    <div 
+                      className="absolute w-8 h-0.5 bg-white"
+                      style={{
+                        bottom: `${scale(item.median || 0)}px`
+                      }}
+                    />
+                    <span className="absolute -bottom-5 text-[10px] text-muted-foreground truncate max-w-12">
+                      {item.name}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>
