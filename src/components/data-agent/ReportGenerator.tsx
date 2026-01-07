@@ -30,11 +30,13 @@ import {
   Lightbulb,
   Rocket,
   Eye,
+  Palette,
 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { DatasetState } from "@/pages/DataAgent";
+import PDFTemplateSelector, { PDFTemplate, PDF_TEMPLATES } from "./PDFTemplateSelector";
 
 interface ReportGeneratorProps {
   dataset: DatasetState;
@@ -128,6 +130,8 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
   const [generationProgress, setGenerationProgress] = useState(0);
   const [autoUpdate, setAutoUpdate] = useState(false);
   const [lastDataHash, setLastDataHash] = useState<string>("");
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<PDFTemplate>(PDF_TEMPLATES[0]);
 
   // Calculate simple hash of data for change detection
   const calculateDataHash = useCallback(() => {
@@ -248,7 +252,7 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
     }
   };
 
-  const exportToPDF = () => {
+  const exportToPDF = (template: PDFTemplate = selectedTemplate) => {
     if (!report) return;
 
     const doc = new jsPDF();
@@ -256,50 +260,102 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
     const pageHeight = doc.internal.pageSize.getHeight();
     let yPos = 20;
 
+    // Get colors from template
+    const { primary, secondary, accent, text, textLight, background, headerBg } = template.colors;
+
     // Helper function to check page break
     const checkPageBreak = (neededSpace: number = 30) => {
       if (yPos + neededSpace > pageHeight - 20) {
         doc.addPage();
+        // Add background color if template has it
+        if (template.style === "elegant" || template.style === "modern") {
+          doc.setFillColor(background[0], background[1], background[2]);
+          doc.rect(0, 0, pageWidth, pageHeight, 'F');
+        }
         yPos = 20;
       }
     };
 
-    // Title Page
-    doc.setFillColor(20, 184, 166); // Primary color
-    doc.rect(0, 0, pageWidth, 60, 'F');
+    // Add decorative element based on style
+    const addDecorativeElement = (style: string) => {
+      if (style === "elegant") {
+        // Add side accent bar
+        doc.setFillColor(accent[0], accent[1], accent[2]);
+        doc.rect(0, 0, 4, pageHeight, 'F');
+      } else if (style === "bold") {
+        // Add top and bottom bars
+        doc.setFillColor(secondary[0], secondary[1], secondary[2]);
+        doc.rect(0, pageHeight - 3, pageWidth, 3, 'F');
+      }
+    };
+
+    // Title Page with template colors
+    doc.setFillColor(headerBg[0], headerBg[1], headerBg[2]);
+    doc.rect(0, 0, pageWidth, 70, 'F');
+    
+    // Add accent stripe
+    doc.setFillColor(accent[0], accent[1], accent[2]);
+    doc.rect(0, 70, pageWidth, 4, 'F');
     
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
     doc.setFont("helvetica", "bold");
-    doc.text(report.title, pageWidth / 2, 35, { align: "center" });
+    doc.text(report.title, pageWidth / 2, 30, { align: "center" });
     
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "normal");
-    doc.text(`Generated: ${new Date(report.generatedAt).toLocaleDateString()}`, pageWidth / 2, 50, { align: "center" });
-    
-    yPos = 80;
-    doc.setTextColor(0, 0, 0);
-
-    // Executive Summary
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(20, 184, 166);
-    doc.text("Executive Summary", 14, yPos);
-    yPos += 10;
+    // Add template badge
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(60, 60, 60);
+    doc.text(template.name + " Template", pageWidth / 2, 45, { align: "center" });
+    
+    doc.setFontSize(12);
+    doc.text(`Generated: ${new Date(report.generatedAt).toLocaleDateString()}`, pageWidth / 2, 58, { align: "center" });
+    
+    yPos = 90;
+
+    // Section header helper with template styling
+    const addSectionHeader = (title: string) => {
+      checkPageBreak(40);
+      doc.setFontSize(16);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(primary[0], primary[1], primary[2]);
+      
+      if (template.style === "bold") {
+        // Add background rectangle for bold style
+        doc.setFillColor(primary[0], primary[1], primary[2]);
+        doc.rect(14, yPos - 6, pageWidth - 28, 10, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.text(title, 18, yPos);
+        doc.setTextColor(text[0], text[1], text[2]);
+      } else if (template.style === "elegant") {
+        // Add underline for elegant style
+        doc.text(title, 14, yPos);
+        doc.setDrawColor(accent[0], accent[1], accent[2]);
+        doc.setLineWidth(0.5);
+        doc.line(14, yPos + 2, 14 + doc.getTextWidth(title), yPos + 2);
+      } else if (template.style === "minimal") {
+        // Simple text for minimal
+        doc.setTextColor(text[0], text[1], text[2]);
+        doc.text(title.toUpperCase(), 14, yPos);
+      } else {
+        // Modern style - with accent bar
+        doc.setFillColor(primary[0], primary[1], primary[2]);
+        doc.rect(14, yPos - 5, 3, 8, 'F');
+        doc.text(title, 22, yPos);
+      }
+      yPos += 12;
+    };
+
+    // Executive Summary
+    addSectionHeader("Executive Summary");
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(text[0], text[1], text[2]);
     const summaryLines = doc.splitTextToSize(report.executiveSummary, pageWidth - 28);
     doc.text(summaryLines, 14, yPos);
     yPos += summaryLines.length * 5 + 15;
 
-    // Dataset Overview Table
-    checkPageBreak(50);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(20, 184, 166);
-    doc.text("Dataset Overview", 14, yPos);
-    yPos += 8;
+    // Dataset Overview Table with template colors
+    addSectionHeader("Dataset Overview");
 
     autoTable(doc, {
       startY: yPos,
@@ -309,110 +365,130 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
         ["Total Records", report.datasetOverview.records.toLocaleString()],
         ["Total Columns", report.datasetOverview.columns.toString()],
         ["Status", projectStatus.charAt(0).toUpperCase() + projectStatus.slice(1).replace('-', ' ')],
+        ["Report Template", template.name],
       ],
-      theme: "striped",
-      headStyles: { fillColor: [20, 184, 166], textColor: [255, 255, 255] },
-      alternateRowStyles: { fillColor: [245, 245, 245] },
+      theme: template.style === "minimal" ? "plain" : "striped",
+      headStyles: { 
+        fillColor: [primary[0], primary[1], primary[2]], 
+        textColor: [255, 255, 255],
+        fontStyle: 'bold'
+      },
+      alternateRowStyles: { 
+        fillColor: [background[0], background[1], background[2]] 
+      },
+      styles: {
+        textColor: [text[0], text[1], text[2]],
+      }
     });
 
     yPos = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 20;
 
     // Objectives
-    checkPageBreak(40);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(20, 184, 166);
-    doc.text("Objectives", 14, yPos);
-    yPos += 10;
+    addSectionHeader("Objectives");
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(60, 60, 60);
+    doc.setTextColor(text[0], text[1], text[2]);
     report.objectives.forEach((obj, idx) => {
       checkPageBreak(10);
-      doc.text(`${idx + 1}. ${obj}`, 18, yPos);
+      doc.setFillColor(secondary[0], secondary[1], secondary[2]);
+      doc.circle(17, yPos - 1.5, 1.5, 'F');
+      doc.text(obj, 22, yPos);
       yPos += 7;
     });
     yPos += 10;
 
     // Key Findings
-    checkPageBreak(40);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(20, 184, 166);
-    doc.text("Key Findings", 14, yPos);
-    yPos += 10;
+    addSectionHeader(`Key Findings (${report.keyFindings.length})`);
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(60, 60, 60);
     report.keyFindings.forEach((finding, idx) => {
       checkPageBreak(15);
-      const findingLines = doc.splitTextToSize(`${idx + 1}. ${finding}`, pageWidth - 32);
-      doc.text(findingLines, 18, yPos);
-      yPos += findingLines.length * 5 + 3;
+      // Add numbered badge
+      doc.setFillColor(secondary[0], secondary[1], secondary[2]);
+      doc.roundedRect(14, yPos - 4, 8, 6, 1, 1, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(8);
+      doc.text(String(idx + 1), 16.5, yPos, { align: 'center' });
+      
+      doc.setTextColor(text[0], text[1], text[2]);
+      doc.setFontSize(10);
+      const findingLines = doc.splitTextToSize(finding, pageWidth - 38);
+      doc.text(findingLines, 26, yPos);
+      yPos += findingLines.length * 5 + 5;
     });
     yPos += 10;
 
     // Recommendations
-    checkPageBreak(40);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(20, 184, 166);
-    doc.text("Recommendations", 14, yPos);
-    yPos += 10;
+    addSectionHeader(`Recommendations (${report.recommendations.length})`);
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(60, 60, 60);
     report.recommendations.forEach((rec, idx) => {
       checkPageBreak(15);
-      const recLines = doc.splitTextToSize(`${idx + 1}. ${rec}`, pageWidth - 32);
-      doc.text(recLines, 18, yPos);
-      yPos += recLines.length * 5 + 3;
+      // Add priority indicator
+      doc.setFillColor(accent[0], accent[1], accent[2]);
+      doc.roundedRect(14, yPos - 4, 8, 6, 1, 1, 'F');
+      doc.setTextColor(primary[0], primary[1], primary[2]);
+      doc.setFontSize(8);
+      doc.text(String(idx + 1), 16.5, yPos, { align: 'center' });
+      
+      doc.setTextColor(text[0], text[1], text[2]);
+      doc.setFontSize(10);
+      const recLines = doc.splitTextToSize(rec, pageWidth - 38);
+      doc.text(recLines, 26, yPos);
+      yPos += recLines.length * 5 + 5;
     });
     yPos += 10;
 
     // Conclusion
-    checkPageBreak(40);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(20, 184, 166);
-    doc.text("Conclusion", 14, yPos);
-    yPos += 10;
+    addSectionHeader("Conclusion");
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(60, 60, 60);
+    doc.setTextColor(text[0], text[1], text[2]);
     const conclusionLines = doc.splitTextToSize(report.conclusion, pageWidth - 28);
     doc.text(conclusionLines, 14, yPos);
     yPos += conclusionLines.length * 5 + 15;
 
     // Future Scope
-    checkPageBreak(40);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(20, 184, 166);
-    doc.text("Future Scope", 14, yPos);
-    yPos += 10;
+    addSectionHeader("Future Scope");
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(60, 60, 60);
+    doc.setTextColor(text[0], text[1], text[2]);
     report.futureScope.forEach((scope, idx) => {
       checkPageBreak(10);
-      doc.text(`• ${scope}`, 18, yPos);
+      doc.setFillColor(accent[0], accent[1], accent[2]);
+      doc.circle(17, yPos - 1.5, 1.5, 'F');
+      doc.text(scope, 22, yPos);
       yPos += 7;
     });
 
-    // Footer on all pages
+    // Footer on all pages with template styling
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
+      
+      // Add decorative elements based on style
+      addDecorativeElement(template.style);
+      
+      // Footer bar
+      doc.setFillColor(primary[0], primary[1], primary[2]);
+      doc.rect(0, pageHeight - 12, pageWidth, 12, 'F');
+      
       doc.setFontSize(8);
-      doc.setTextColor(150, 150, 150);
-      doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: "center" });
-      doc.text("Generated by AIDataForge", 14, pageHeight - 10);
+      doc.setTextColor(255, 255, 255);
+      doc.text(`Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 5, { align: "center" });
+      doc.text("Generated by DataForge AI", 14, pageHeight - 5);
+      doc.text(template.name, pageWidth - 14, pageHeight - 5, { align: "right" });
     }
 
     // Save
-    doc.save(`${report.title.replace(/\s+/g, '_')}_Report.pdf`);
-    toast.success("PDF exported successfully!");
+    doc.save(`${report.title.replace(/\s+/g, '_')}_${template.id}_Report.pdf`);
+    toast.success(`PDF exported with ${template.name} template!`);
+  };
+
+  const handleTemplateSelect = (template: PDFTemplate) => {
+    setSelectedTemplate(template);
+    exportToPDF(template);
+    setShowTemplateSelector(false);
   };
 
   return (
@@ -525,9 +601,16 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
           </div>
 
           {isGenerating && (
-            <div className="space-y-2 animate-fade-in">
+            <div className="space-y-3 animate-fade-in">
+              <div className="flex flex-col items-center justify-center py-4 gap-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+                  <span className="text-lg font-medium text-primary">We are creating a perfect report</span>
+                </div>
+                <span className="text-sm text-muted-foreground">Please wait a while...</span>
+              </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Generating comprehensive report...</span>
+                <span className="text-muted-foreground">Processing your data...</span>
                 <span className="font-medium">{generationProgress}%</span>
               </div>
               <Progress value={generationProgress} className="h-2" />
@@ -556,7 +639,15 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
                     <Calendar className="h-3 w-3 mr-1.5" />
                     {new Date(report.generatedAt).toLocaleDateString()}
                   </Badge>
-                  <Button onClick={exportToPDF} className="shadow-button">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setShowTemplateSelector(true)} 
+                    className="shadow-button"
+                  >
+                    <Palette className="w-4 h-4 mr-2" />
+                    Templates
+                  </Button>
+                  <Button onClick={() => exportToPDF()} className="shadow-button">
                     <FileDown className="w-4 h-4 mr-2" />
                     Export PDF
                   </Button>
@@ -721,6 +812,14 @@ const ReportGenerator = ({ dataset }: ReportGeneratorProps) => {
           </div>
         </div>
       )}
+
+      {/* PDF Template Selector Modal */}
+      <PDFTemplateSelector
+        open={showTemplateSelector}
+        onOpenChange={setShowTemplateSelector}
+        onSelectTemplate={handleTemplateSelect}
+        selectedTemplateId={selectedTemplate.id}
+      />
     </div>
   );
 };
