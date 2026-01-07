@@ -1,4 +1,4 @@
-import { Database, Github, Twitter, Linkedin, Heart } from "lucide-react";
+import { Database, Github, Twitter, Linkedin, Heart, Instagram } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import DonateModal from "./DonateModal";
@@ -74,13 +74,13 @@ const Footer = () => {
               <Heart className="w-4 h-4" />
               Support Us
             </Button>
-            <a href="#" className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors">
-              <Twitter className="w-5 h-5" />
+            <a href="https://www.instagram.com/_alpha.iox.1?igsh=MTY2aHNkamdmZXRmbg==" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors">
+              <Instagram className="w-5 h-5" />
             </a>
-            <a href="#" className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors">
+            <a href="https://github.com/benadictfrancisdev" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors">
               <Github className="w-5 h-5" />
             </a>
-            <a href="#" className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors">
+            <a href="https://www.linkedin.com/in/benadict-francis-david-5959a7313" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-lg bg-secondary flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-secondary/80 transition-colors">
               <Linkedin className="w-5 h-5" />
             </a>
           </div>
