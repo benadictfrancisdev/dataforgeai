@@ -38,8 +38,19 @@ import {
   CheckCircle2,
   X,
   Settings2,
-  Trash2
+  Trash2,
+  LayoutTemplate,
+  Briefcase,
+  ShoppingCart,
+  Users,
+  DollarSign,
+  Building2,
+  Rocket,
+  Heart,
+  GraduationCap,
+  type LucideIcon
 } from "lucide-react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { usePdfExport } from "@/hooks/usePdfExport";
 import {
@@ -95,6 +106,111 @@ interface DataTransformation {
   newName?: string;
 }
 
+// Dashboard Template Interface
+interface DashboardTemplate {
+  id: string;
+  name: string;
+  description: string;
+  icon: LucideIcon;
+  tileTypes: DashboardTile["type"][];
+  color: string;
+  category: "business" | "sales" | "marketing" | "hr" | "finance" | "operations" | "custom";
+}
+
+// Pre-defined Dashboard Templates
+const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
+  {
+    id: "executive-summary",
+    name: "Executive Summary",
+    description: "High-level KPIs with trend analysis for C-suite presentations",
+    icon: Briefcase,
+    tileTypes: ["kpi", "line", "bar", "gauge"],
+    color: "from-slate-600 to-slate-800",
+    category: "business"
+  },
+  {
+    id: "sales-performance",
+    name: "Sales Performance",
+    description: "Revenue tracking, conversion funnels, and sales metrics",
+    icon: DollarSign,
+    tileTypes: ["kpi", "bar", "funnel", "line", "pie"],
+    color: "from-emerald-500 to-teal-600",
+    category: "sales"
+  },
+  {
+    id: "marketing-analytics",
+    name: "Marketing Analytics",
+    description: "Campaign performance, audience insights, and engagement metrics",
+    icon: Rocket,
+    tileTypes: ["kpi", "area", "pie", "bar", "scatter"],
+    color: "from-purple-500 to-pink-600",
+    category: "marketing"
+  },
+  {
+    id: "hr-dashboard",
+    name: "HR & People",
+    description: "Employee metrics, headcount, and workforce analytics",
+    icon: Users,
+    tileTypes: ["kpi", "bar", "pie", "histogram", "boxplot"],
+    color: "from-blue-500 to-indigo-600",
+    category: "hr"
+  },
+  {
+    id: "financial-overview",
+    name: "Financial Overview",
+    description: "P&L analysis, budget tracking, and financial KPIs",
+    icon: Building2,
+    tileTypes: ["kpi", "waterfall", "bar", "line", "combo"],
+    color: "from-amber-500 to-orange-600",
+    category: "finance"
+  },
+  {
+    id: "operations-metrics",
+    name: "Operations Metrics",
+    description: "Efficiency tracking, process metrics, and operational KPIs",
+    icon: Settings2,
+    tileTypes: ["kpi", "gauge", "line", "histogram", "scatter"],
+    color: "from-cyan-500 to-blue-600",
+    category: "operations"
+  },
+  {
+    id: "ecommerce-analytics",
+    name: "E-Commerce Analytics",
+    description: "Order tracking, customer behavior, and product performance",
+    icon: ShoppingCart,
+    tileTypes: ["kpi", "bar", "line", "pie", "funnel", "treemap"],
+    color: "from-rose-500 to-red-600",
+    category: "sales"
+  },
+  {
+    id: "customer-insights",
+    name: "Customer Insights",
+    description: "Customer segmentation, satisfaction, and behavior analysis",
+    icon: Heart,
+    tileTypes: ["kpi", "pie", "scatter", "bar", "boxplot"],
+    color: "from-pink-500 to-rose-600",
+    category: "marketing"
+  },
+  {
+    id: "research-analysis",
+    name: "Research & Analysis",
+    description: "Statistical analysis, distributions, and data exploration",
+    icon: GraduationCap,
+    tileTypes: ["histogram", "scatter", "boxplot", "line", "bar", "kpi"],
+    color: "from-green-500 to-emerald-600",
+    category: "custom"
+  },
+  {
+    id: "comprehensive",
+    name: "Comprehensive Dashboard",
+    description: "All chart types for complete data visualization",
+    icon: LayoutTemplate,
+    tileTypes: ["kpi", "bar", "line", "pie", "area", "scatter", "combo", "gauge", "treemap", "funnel", "waterfall", "histogram", "boxplot"],
+    color: "from-cyan-500 to-teal-600",
+    category: "custom"
+  }
+];
+
 const POWER_BI_COLORS = [
   "#01B8AA", // Teal
   "#374649", // Dark Gray
@@ -120,6 +236,8 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
   const [transformations, setTransformations] = useState<DataTransformation[]>([]);
   const [processedData, setProcessedData] = useState<Record<string, unknown>[]>(data);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<DashboardTemplate | null>(null);
+  const [showTemplateSelector, setShowTemplateSelector] = useState(false);
   const { exportToPdf } = usePdfExport();
 
   const numericColumns = useMemo(() => 
@@ -298,40 +416,47 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
     }, 1500);
   };
 
-  // Generate Power BI style dashboard
-  const generateDashboard = useCallback(() => {
+  // Generate Power BI style dashboard based on template
+  const generateDashboard = useCallback((template?: DashboardTemplate) => {
     setIsGenerating(true);
     const dataToUse = processedData.length > 0 ? processedData : data;
     const activeColumns = selectedColumns.length > 0 ? selectedColumns : columns;
     const activeNumericCols = activeColumns.filter(c => columnTypes[c] === "numeric");
     const activeCategoricalCols = activeColumns.filter(c => columnTypes[c] === "categorical");
+    const templateToUse = template || selectedTemplate;
     
     setTimeout(() => {
       const newTiles: DashboardTile[] = [];
+      const allowedTypes = templateToUse?.tileTypes || ["kpi", "bar", "line", "pie", "area", "scatter", "combo", "gauge", "treemap", "funnel", "waterfall", "histogram", "boxplot"];
+      
+      // Helper to check if tile type is allowed
+      const isAllowed = (type: DashboardTile["type"]) => allowedTypes.includes(type);
 
       // Generate KPI tiles for top numeric columns
-      activeNumericCols.slice(0, 4).forEach((col, i) => {
-        const values = dataToUse.map(row => Number(row[col])).filter(v => !isNaN(v));
-        const sum = values.reduce((a, b) => a + b, 0);
-        const avg = values.length > 0 ? sum / values.length : 0;
-        const prevAvg = values.length > 1 ? 
-          values.slice(0, -1).reduce((a, b) => a + b, 0) / (values.length - 1) : avg;
-        const change = prevAvg !== 0 ? ((avg - prevAvg) / prevAvg) * 100 : 0;
+      if (isAllowed("kpi")) {
+        activeNumericCols.slice(0, 4).forEach((col, i) => {
+          const values = dataToUse.map(row => Number(row[col])).filter(v => !isNaN(v));
+          const sum = values.reduce((a, b) => a + b, 0);
+          const avg = values.length > 0 ? sum / values.length : 0;
+          const prevAvg = values.length > 1 ? 
+            values.slice(0, -1).reduce((a, b) => a + b, 0) / (values.length - 1) : avg;
+          const change = prevAvg !== 0 ? ((avg - prevAvg) / prevAvg) * 100 : 0;
 
-        newTiles.push({
-          id: `kpi-${col}`,
-          type: "kpi",
-          title: col,
-          size: "small",
-          column: col,
-          value: avg,
-          change,
-          color: POWER_BI_COLORS[i % POWER_BI_COLORS.length]
+          newTiles.push({
+            id: `kpi-${col}`,
+            type: "kpi",
+            title: col,
+            size: "small",
+            column: col,
+            value: avg,
+            change,
+            color: POWER_BI_COLORS[i % POWER_BI_COLORS.length]
+          });
         });
-      });
+      }
 
       // Bar chart for categorical vs numeric
-      if (activeCategoricalCols.length > 0 && activeNumericCols.length > 0) {
+      if (isAllowed("bar") && activeCategoricalCols.length > 0 && activeNumericCols.length > 0) {
         const catCol = activeCategoricalCols[0];
         const numCol = activeNumericCols[0];
         const grouped = dataToUse.reduce((acc: Record<string, number[]>, row) => {
@@ -360,7 +485,7 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Pie chart for distribution
-      if (activeCategoricalCols.length > 0) {
+      if (isAllowed("pie") && activeCategoricalCols.length > 0) {
         const catCol = activeCategoricalCols[0];
         const counts = dataToUse.reduce((acc: Record<string, number>, row) => {
           const key = String(row[catCol]);
@@ -384,7 +509,7 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Line/Trend chart
-      if (activeNumericCols.length > 0) {
+      if (isAllowed("line") && activeNumericCols.length > 0) {
         const col = activeNumericCols[0];
         const chartData = dataToUse.slice(0, 50).map((row, i) => ({
           index: i + 1,
@@ -403,7 +528,7 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Area chart
-      if (activeNumericCols.length > 1) {
+      if (isAllowed("area") && activeNumericCols.length > 1) {
         const col = activeNumericCols[1];
         const chartData = dataToUse.slice(0, 50).map((row, i) => ({
           index: i + 1,
@@ -422,7 +547,7 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Combo chart if enough data
-      if (activeNumericCols.length >= 2 && activeCategoricalCols.length > 0) {
+      if (isAllowed("combo") && activeNumericCols.length >= 2 && activeCategoricalCols.length > 0) {
         const catCol = activeCategoricalCols[0];
         const num1 = activeNumericCols[0];
         const num2 = activeNumericCols[1];
@@ -455,7 +580,7 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Scatter plot for correlation analysis
-      if (activeNumericCols.length >= 2) {
+      if (isAllowed("scatter") && activeNumericCols.length >= 2) {
         const xCol = activeNumericCols[0];
         const yCol = activeNumericCols[1];
         const scatterData = dataToUse.slice(0, 100).map(row => ({
@@ -477,7 +602,7 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Histogram for distribution analysis
-      if (activeNumericCols.length > 0) {
+      if (isAllowed("histogram") && activeNumericCols.length > 0) {
         const col = activeNumericCols[Math.min(2, activeNumericCols.length - 1)];
         const values = dataToUse.map(row => Number(row[col])).filter(v => !isNaN(v));
         const min = Math.min(...values);
@@ -513,7 +638,7 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Gauge chart for key metrics
-      if (activeNumericCols.length > 0) {
+      if (isAllowed("gauge") && activeNumericCols.length > 0) {
         const col = activeNumericCols[0];
         const values = dataToUse.map(row => Number(row[col])).filter(v => !isNaN(v));
         const avg = values.reduce((a, b) => a + b, 0) / values.length;
@@ -533,7 +658,7 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Treemap for hierarchical data
-      if (activeCategoricalCols.length >= 2 && activeNumericCols.length > 0) {
+      if (isAllowed("treemap") && activeCategoricalCols.length >= 2 && activeNumericCols.length > 0) {
         const cat1 = activeCategoricalCols[0];
         const cat2 = activeCategoricalCols[1];
         const numCol = activeNumericCols[0];
@@ -566,7 +691,7 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Funnel chart for sequential data
-      if (activeCategoricalCols.length > 0 && activeNumericCols.length > 0) {
+      if (isAllowed("funnel") && activeCategoricalCols.length > 0 && activeNumericCols.length > 0) {
         const catCol = activeCategoricalCols[Math.min(1, activeCategoricalCols.length - 1)] || activeCategoricalCols[0];
         const numCol = activeNumericCols[0];
         
@@ -595,7 +720,7 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Waterfall chart for cumulative analysis
-      if (activeNumericCols.length > 0 && activeCategoricalCols.length > 0) {
+      if (isAllowed("waterfall") && activeNumericCols.length > 0 && activeCategoricalCols.length > 0) {
         const catCol = activeCategoricalCols[0];
         const numCol = activeNumericCols[0];
 
@@ -627,7 +752,7 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       }
 
       // Box plot for statistical distribution
-      if (activeNumericCols.length > 0 && activeCategoricalCols.length > 0) {
+      if (isAllowed("boxplot") && activeNumericCols.length > 0 && activeCategoricalCols.length > 0) {
         const catCol = activeCategoricalCols[0];
         const numCol = activeNumericCols[0];
 
@@ -661,9 +786,10 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
 
       setTiles(newTiles);
       setIsGenerating(false);
-      toast.success(`Generated ${newTiles.length} dashboard tiles using ${dataToUse.length} rows`);
+      const templateName = templateToUse ? ` with "${templateToUse.name}" template` : "";
+      toast.success(`Generated ${newTiles.length} dashboard tiles${templateName} using ${dataToUse.length} rows`);
     }, 2000);
-  }, [data, processedData, selectedColumns, columns, columnTypes]);
+  }, [data, processedData, selectedColumns, columns, columnTypes, selectedTemplate]);
 
   const renderTile = (tile: DashboardTile) => {
     const sizeClasses = {
@@ -1031,7 +1157,16 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
                 {viewMode === "grid" ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
               </Button>
               <Button
-                onClick={generateDashboard}
+                onClick={() => setShowTemplateSelector(true)}
+                variant="outline"
+                size="sm"
+                className="gap-2"
+              >
+                <LayoutTemplate className="h-4 w-4" />
+                Templates
+              </Button>
+              <Button
+                onClick={() => generateDashboard()}
                 disabled={isGenerating}
                 className="bg-gradient-to-r from-cyan-500 to-teal-600"
               >
@@ -1345,6 +1480,83 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
           {tiles.map(renderTile)}
         </div>
       )}
+
+      {/* Template Selector Dialog */}
+      <Dialog open={showTemplateSelector} onOpenChange={setShowTemplateSelector}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LayoutTemplate className="h-5 w-5 text-cyan-500" />
+              Choose Dashboard Template
+            </DialogTitle>
+            <DialogDescription>
+              Select a template to generate a dashboard optimized for your use case
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+            {DASHBOARD_TEMPLATES.map((template) => {
+              const IconComponent = template.icon;
+              const isSelected = selectedTemplate?.id === template.id;
+              
+              return (
+                <Card 
+                  key={template.id}
+                  className={`cursor-pointer transition-all hover:shadow-lg hover:scale-[1.02] ${
+                    isSelected ? "ring-2 ring-cyan-500 bg-cyan-500/5" : ""
+                  }`}
+                  onClick={() => setSelectedTemplate(template)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2.5 rounded-lg bg-gradient-to-br ${template.color} shadow-lg`}>
+                        <IconComponent className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-sm flex items-center gap-2">
+                          {template.name}
+                          {isSelected && <CheckCircle2 className="h-4 w-4 text-cyan-500" />}
+                        </h3>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {template.description}
+                        </p>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {template.tileTypes.slice(0, 5).map((type) => (
+                            <Badge key={type} variant="secondary" className="text-[10px] px-1.5 py-0">
+                              {type}
+                            </Badge>
+                          ))}
+                          {template.tileTypes.length > 5 && (
+                            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                              +{template.tileTypes.length - 5}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowTemplateSelector(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                setShowTemplateSelector(false);
+                generateDashboard(selectedTemplate || undefined);
+              }}
+              className="bg-gradient-to-r from-cyan-500 to-teal-600"
+            >
+              <Zap className="h-4 w-4 mr-2" />
+              Generate with {selectedTemplate?.name || "Default"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
