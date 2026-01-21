@@ -232,12 +232,51 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<DashboardTemplate | null>(null);
   const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+  const [showProfiling, setShowProfiling] = useState(false);
+  const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const { exportToPdf } = usePdfExport();
+
+  // DnD Kit sensors for drag-and-drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const numericColumns = useMemo(() => 
     columns.filter(c => columnTypes[c] === "numeric"), [columns, columnTypes]);
   const categoricalColumns = useMemo(() => 
     columns.filter(c => columnTypes[c] === "categorical"), [columns, columnTypes]);
+
+  // Handle drag end for tile reordering
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveDragId(null);
+
+    if (over && active.id !== over.id) {
+      setTiles((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+        return arrayMove(items, oldIndex, newIndex);
+      });
+      toast.success("Tile reordered");
+    }
+  }, []);
+
+  // Handle tile resize
+  const handleTileResize = useCallback((id: string, newSize: "small" | "medium" | "large") => {
+    setTiles((items) =>
+      items.map((item) =>
+        item.id === id ? { ...item, size: newSize } : item
+      )
+    );
+    toast.success(`Tile resized to ${newSize}`);
+  }, []);
 
   const handleExportPdf = () => {
     exportToPdf({
@@ -1124,6 +1163,15 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
             
             <div className="flex items-center gap-2 flex-wrap">
               <Button
+                variant={showProfiling ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowProfiling(!showProfiling)}
+                className={showProfiling ? "bg-gradient-to-r from-indigo-500 to-purple-600" : ""}
+              >
+                <Brain className="h-4 w-4 mr-2" />
+                Data Profiling
+              </Button>
+              <Button
                 variant={showDataEditor ? "default" : "outline"}
                 size="sm"
                 onClick={() => setShowDataEditor(!showDataEditor)}
@@ -1220,6 +1268,19 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
           </CardContent>
         </Card>
       </div>
+
+      {/* Data Profiling Panel */}
+      {showProfiling && (
+        <DataProfilingPanel
+          data={processedData.length > 0 ? processedData : data}
+          columns={selectedColumns.length > 0 ? selectedColumns : columns}
+          columnTypes={columnTypes}
+          datasetName={datasetName}
+          onChartSuggestion={(suggestion) => {
+            toast.success(`Chart suggestion: ${suggestion.title}`);
+          }}
+        />
+      )}
 
       {/* Data Editor Panel */}
       {showDataEditor && (
@@ -1466,13 +1527,32 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       )}
 
       {tiles.length > 0 && !isGenerating && (
-        <div className={`grid gap-4 ${
-          viewMode === "grid" 
-            ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" 
-            : "grid-cols-1"
-        }`}>
-          {tiles.map(renderTile)}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={(event) => setActiveDragId(String(event.active.id))}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={tiles.map(t => t.id)} strategy={rectSortingStrategy}>
+            <div className={`grid gap-4 ${
+              viewMode === "grid" 
+                ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3" 
+                : "grid-cols-1"
+            }`}>
+              {tiles.map((tile) => (
+                <DraggableTile
+                  key={tile.id}
+                  tile={tile}
+                  isSelected={selectedTile === tile.id}
+                  onSelect={() => setSelectedTile(tile.id === selectedTile ? null : tile.id)}
+                  viewMode={viewMode}
+                  onResize={handleTileResize}
+                  isDragging={activeDragId === tile.id}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Template Selector Dialog */}
