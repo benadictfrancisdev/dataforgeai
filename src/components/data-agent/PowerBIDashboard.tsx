@@ -10,6 +10,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from "@dnd-kit/sortable";
+import {
   LayoutDashboard,
   Sparkles,
   Grid3X3,
@@ -48,11 +63,14 @@ import {
   Rocket,
   Heart,
   GraduationCap,
+  Brain,
   type LucideIcon
 } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { DraggableTile, DashboardTile, POWER_BI_COLORS } from "./powerbi/DraggableTile";
+import { DataProfilingPanel } from "./powerbi/DataProfilingPanel";
 import {
   BarChart,
   Bar,
@@ -81,20 +99,7 @@ interface PowerBIDashboardProps {
   datasetName: string;
 }
 
-interface DashboardTile {
-  id: string;
-  type: "kpi" | "bar" | "line" | "pie" | "area" | "scatter" | "combo" | "table" | "radar" | "funnel" | "waterfall" | "heatmap" | "gauge" | "treemap" | "histogram" | "boxplot";
-  title: string;
-  size: "small" | "medium" | "large";
-  column?: string;
-  xAxis?: string;
-  yAxis?: string;
-  data?: any[];
-  value?: number;
-  change?: number;
-  color?: string;
-  secondaryData?: any[];
-}
+// DashboardTile and POWER_BI_COLORS imported from ./powerbi/DraggableTile
 
 interface DataTransformation {
   id: string;
@@ -211,18 +216,7 @@ const DASHBOARD_TEMPLATES: DashboardTemplate[] = [
   }
 ];
 
-const POWER_BI_COLORS = [
-  "#01B8AA", // Teal
-  "#374649", // Dark Gray
-  "#FD625E", // Red
-  "#F2C80F", // Yellow
-  "#5F6B6D", // Gray
-  "#8AD4EB", // Light Blue
-  "#FE9666", // Orange
-  "#A66999", // Purple
-  "#3599B8", // Blue
-  "#DFBFBF"  // Pink
-];
+// POWER_BI_COLORS imported from ./powerbi/DraggableTile
 
 const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDashboardProps) => {
   const [tiles, setTiles] = useState<DashboardTile[]>([]);
