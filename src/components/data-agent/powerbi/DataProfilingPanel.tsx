@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,10 +24,14 @@ import {
   ScatterChart,
   Target,
   RefreshCw,
-  Lightbulb
+  Lightbulb,
+  Grid3X3,
+  Shield
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { CorrelationHeatmap } from "./CorrelationHeatmap";
+import { DataQualityAlerts } from "./DataQualityAlerts";
 
 interface DataProfilingPanelProps {
   data: Record<string, unknown>[];
@@ -670,7 +674,7 @@ export const DataProfilingPanel = ({
       {columnProfiles.length > 0 && (
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-4 w-full max-w-lg mb-4">
+            <TabsList className="grid grid-cols-6 w-full max-w-2xl mb-4">
               <TabsTrigger value="columns" className="gap-1">
                 <Database className="h-3 w-3" />
                 Columns
@@ -679,13 +683,21 @@ export const DataProfilingPanel = ({
                 <Target className="h-3 w-3" />
                 Correlations
               </TabsTrigger>
+              <TabsTrigger value="heatmap" className="gap-1">
+                <Grid3X3 className="h-3 w-3" />
+                Heatmap
+              </TabsTrigger>
+              <TabsTrigger value="quality" className="gap-1">
+                <Shield className="h-3 w-3" />
+                Quality
+              </TabsTrigger>
               <TabsTrigger value="charts" className="gap-1">
                 <BarChart3 className="h-3 w-3" />
                 Charts
               </TabsTrigger>
               <TabsTrigger value="insights" className="gap-1">
                 <Sparkles className="h-3 w-3" />
-                AI Insights
+                AI
               </TabsTrigger>
             </TabsList>
 
@@ -795,6 +807,22 @@ export const DataProfilingPanel = ({
                   </div>
                 )}
               </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="heatmap">
+              <CorrelationHeatmap 
+                correlations={correlations}
+                numericColumns={columns.filter(col => 
+                  columnProfiles.find(p => p.name === col)?.type === "numeric"
+                )}
+              />
+            </TabsContent>
+
+            <TabsContent value="quality">
+              <DataQualityAlerts 
+                columnProfiles={columnProfiles}
+                data={data}
+              />
             </TabsContent>
 
             <TabsContent value="charts">
