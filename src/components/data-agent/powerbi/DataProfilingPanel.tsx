@@ -26,12 +26,14 @@ import {
   RefreshCw,
   Lightbulb,
   Grid3X3,
-  Shield
+  Shield,
+  Wand2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { CorrelationHeatmap } from "./CorrelationHeatmap";
 import { DataQualityAlerts } from "./DataQualityAlerts";
+import DataCleaningSuggestions from "./DataCleaningSuggestions";
 
 interface DataProfilingPanelProps {
   data: Record<string, unknown>[];
@@ -39,6 +41,7 @@ interface DataProfilingPanelProps {
   columnTypes: Record<string, "numeric" | "categorical" | "date">;
   datasetName: string;
   onChartSuggestion?: (suggestion: ChartSuggestion) => void;
+  onDataCleaned?: (cleanedData: Record<string, unknown>[]) => void;
 }
 
 interface ColumnProfile {
@@ -88,7 +91,8 @@ export const DataProfilingPanel = ({
   columns,
   columnTypes,
   datasetName,
-  onChartSuggestion
+  onChartSuggestion,
+  onDataCleaned
 }: DataProfilingPanelProps) => {
   const [isProfileRunning, setIsProfileRunning] = useState(false);
   const [profileProgress, setProfileProgress] = useState(0);
@@ -695,6 +699,10 @@ export const DataProfilingPanel = ({
                 <BarChart3 className="h-3 w-3" />
                 Charts
               </TabsTrigger>
+              <TabsTrigger value="cleaning" className="gap-1">
+                <Wand2 className="h-3 w-3" />
+                Cleaning
+              </TabsTrigger>
               <TabsTrigger value="insights" className="gap-1">
                 <Sparkles className="h-3 w-3" />
                 AI
@@ -860,6 +868,14 @@ export const DataProfilingPanel = ({
                   </div>
                 )}
               </ScrollArea>
+            </TabsContent>
+
+            <TabsContent value="cleaning">
+              <DataCleaningSuggestions
+                data={data}
+                columns={columns}
+                onDataCleaned={(cleanedData) => onDataCleaned?.(cleanedData)}
+              />
             </TabsContent>
 
             <TabsContent value="insights">
