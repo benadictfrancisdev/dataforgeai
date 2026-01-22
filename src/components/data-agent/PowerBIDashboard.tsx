@@ -1279,6 +1279,10 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
           onChartSuggestion={(suggestion) => {
             toast.success(`Chart suggestion: ${suggestion.title}`);
           }}
+          onDataCleaned={(cleanedData) => {
+            setProcessedData(cleanedData);
+            toast.success(`Data cleaned: ${cleanedData.length} rows updated`);
+          }}
         />
       )}
 
