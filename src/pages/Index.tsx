@@ -5,11 +5,13 @@ import HowItWorks from "@/components/HowItWorks";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
 import WaveBackground from "@/components/WaveBackground";
+import InteractiveWaves from "@/components/InteractiveWaves";
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
       <WaveBackground />
+      <InteractiveWaves />
       <Navbar />
       <main className="relative z-10">
         <Hero />
