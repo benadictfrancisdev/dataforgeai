@@ -10,21 +10,24 @@ const Hero = () => {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-      {/* Background Image */}
+      {/* Background Image with ocean overlay */}
       <div className="absolute inset-0 z-0">
         <img 
           src={heroBg} 
           alt="AI Data Visualization"
-          className="w-full h-full object-cover opacity-30"
+          className="w-full h-full object-cover opacity-20"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/80 to-background" />
+        <div className="absolute inset-0 bg-gradient-to-b from-ocean-light/60 via-background/70 to-transparent dark:from-ocean-deep/40 dark:via-background/60" />
       </div>
 
       {/* Grid Pattern Overlay */}
-      <div className="absolute inset-0 grid-pattern opacity-20" />
+      <div className="absolute inset-0 grid-pattern opacity-10" />
 
-      {/* Glow Effect */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-primary/15 rounded-full blur-[180px] animate-pulse-glow" />
+      {/* Ocean Glow Effect */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-ocean-glow/20 dark:bg-ocean-glow/15 rounded-full blur-[180px] animate-pulse-glow" />
+      
+      {/* Secondary glow for depth */}
+      <div className="absolute top-1/3 left-1/3 w-[400px] h-[400px] bg-cyan/15 rounded-full blur-[120px] animate-pulse-glow" style={{ animationDelay: '1s' }} />
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
