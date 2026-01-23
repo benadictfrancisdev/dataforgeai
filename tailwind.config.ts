@@ -62,7 +62,8 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
         cyan: {
-          DEFAULT: "hsl(var(--cyan-glow))",
+          DEFAULT: "hsl(var(--cyan))",
+          glow: "hsl(var(--cyan-glow))",
           muted: "hsl(var(--cyan-muted))",
         },
         glass: {
@@ -71,6 +72,17 @@ export default {
         },
         navy: {
           deep: "hsl(var(--navy-deep))",
+        },
+        ocean: {
+          DEFAULT: "hsl(var(--ocean))",
+          light: "hsl(var(--ocean-light))",
+          deep: "hsl(var(--ocean-deep))",
+          dark: "hsl(var(--ocean-dark))",
+          wave: "hsl(var(--ocean-wave))",
+          "wave-dark": "hsl(var(--ocean-wave-dark))",
+          foam: "hsl(var(--ocean-foam))",
+          "foam-dark": "hsl(var(--ocean-foam-dark))",
+          glow: "hsl(var(--ocean-glow))",
         },
       },
       borderRadius: {

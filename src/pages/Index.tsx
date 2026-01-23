@@ -4,12 +4,14 @@ import Features from "@/components/Features";
 import HowItWorks from "@/components/HowItWorks";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
+import WaveBackground from "@/components/WaveBackground";
 
 const Index = () => {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      <WaveBackground />
       <Navbar />
-      <main>
+      <main className="relative z-10">
         <Hero />
         <Features />
         <HowItWorks />

@@ -6,145 +6,175 @@
 
 @layer base {
   :root {
-    --background: 210 25% 98%;
-    --foreground: 220 40% 13%;
+    --background: 200 40% 98%;
+    --foreground: 205 50% 15%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 40% 13%;
+    --card: 200 30% 99%;
+    --card-foreground: 205 50% 15%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 40% 13%;
+    --popover: 200 30% 99%;
+    --popover-foreground: 205 50% 15%;
 
-    /* Trust & Quality colors - Deep Blue/Indigo palette */
-    --primary: 221 83% 53%;
+    /* Ocean Blue palette */
+    --primary: 200 85% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 214 32% 96%;
-    --secondary-foreground: 220 40% 13%;
+    --secondary: 195 40% 95%;
+    --secondary-foreground: 205 50% 15%;
 
-    --muted: 214 32% 96%;
-    --muted-foreground: 220 13% 46%;
+    --muted: 195 35% 94%;
+    --muted-foreground: 200 20% 45%;
 
-    --accent: 199 89% 48%;
+    --accent: 185 75% 55%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 221 83% 53%;
+    --border: 195 35% 88%;
+    --input: 195 35% 88%;
+    --ring: 200 85% 50%;
 
     --radius: 0.875rem;
 
-    /* Chart colors for light mode */
-    --chart-1: 221 83% 53%;
-    --chart-2: 199 89% 48%;
-    --chart-3: 168 76% 42%;
-    --chart-4: 43 74% 56%;
-    --chart-5: 12 76% 61%;
+    /* Chart colors - Ocean theme */
+    --chart-1: 200 85% 50%;
+    --chart-2: 185 75% 55%;
+    --chart-3: 170 65% 45%;
+    --chart-4: 195 60% 60%;
+    --chart-5: 210 70% 55%;
+
+    /* Ocean theme colors */
+    --ocean: 200 70% 85%;
+    --ocean-light: 195 60% 92%;
+    --ocean-deep: 205 80% 25%;
+    --ocean-dark: 210 85% 15%;
+    --ocean-wave: 195 75% 65%;
+    --ocean-wave-dark: 200 70% 40%;
+    --ocean-foam: 190 50% 95%;
+    --ocean-foam-dark: 195 40% 85%;
+    --ocean-glow: 195 90% 60%;
 
     /* Custom brand colors */
-    --blue-primary: 221 83% 53%;
-    --blue-deep: 224 71% 35%;
-    --cyan: 199 89% 48%;
-    --indigo: 234 89% 63%;
-    --navy-deep: 220 40% 8%;
-    --glass: 0 0% 100%;
-    --glass-border: 214 32% 91%;
-    --success: 142 71% 45%;
+    --blue-primary: 200 85% 50%;
+    --blue-deep: 210 80% 35%;
+    --cyan: 185 75% 55%;
+    --cyan-glow: 185 80% 60%;
+    --cyan-muted: 185 40% 70%;
+    --indigo: 220 75% 55%;
+    --navy-deep: 210 60% 12%;
+    --glass: 200 30% 99%;
+    --glass-border: 195 35% 88%;
+    --success: 165 70% 45%;
     --warning: 38 92% 50%;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(221 83% 53%) 0%, hsl(234 89% 63%) 50%, hsl(199 89% 48%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(210 25% 99%) 0%, hsl(214 32% 96%) 100%);
-    --gradient-glass: linear-gradient(135deg, hsl(0 0% 100% / 0.95) 0%, hsl(0 0% 100% / 0.8) 100%);
-    --gradient-hero: radial-gradient(ellipse at 50% 0%, hsl(221 83% 53% / 0.12) 0%, transparent 50%);
+    /* Ocean Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(200 85% 50%) 0%, hsl(185 75% 55%) 50%, hsl(195 90% 60%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(195 60% 97%) 0%, hsl(200 40% 94%) 100%);
+    --gradient-glass: linear-gradient(135deg, hsl(200 30% 99% / 0.95) 0%, hsl(195 40% 97% / 0.8) 100%);
+    --gradient-hero: radial-gradient(ellipse at 50% 0%, hsl(200 85% 50% / 0.15) 0%, transparent 60%);
+    --gradient-ocean: linear-gradient(180deg, hsl(195 60% 92%) 0%, hsl(200 70% 85%) 50%, hsl(205 80% 75%) 100%);
 
-    /* Premium shadows */
-    --shadow-glow: 0 0 60px hsl(221 83% 53% / 0.2);
-    --shadow-card: 0 4px 32px hsl(220 40% 13% / 0.06);
-    --shadow-button: 0 4px 20px hsl(221 83% 53% / 0.3);
-    --shadow-elevated: 0 12px 40px hsl(220 40% 13% / 0.1);
+    /* Ocean shadows */
+    --shadow-glow: 0 0 60px hsl(200 85% 50% / 0.25);
+    --shadow-card: 0 4px 32px hsl(205 50% 15% / 0.08);
+    --shadow-button: 0 4px 20px hsl(200 85% 50% / 0.35);
+    --shadow-elevated: 0 12px 40px hsl(205 50% 15% / 0.12);
+    --shadow-wave: 0 -10px 40px hsl(200 85% 50% / 0.15);
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 220 40% 13%;
-    --sidebar-primary: 221 83% 53%;
+    --sidebar-background: 200 30% 99%;
+    --sidebar-foreground: 205 50% 15%;
+    --sidebar-primary: 200 85% 50%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 214 32% 96%;
-    --sidebar-accent-foreground: 220 40% 13%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 221 83% 53%;
+    --sidebar-accent: 195 40% 95%;
+    --sidebar-accent-foreground: 205 50% 15%;
+    --sidebar-border: 195 35% 88%;
+    --sidebar-ring: 200 85% 50%;
   }
 
   .dark {
-    --background: 222 47% 5%;
-    --foreground: 210 40% 98%;
+    --background: 210 60% 6%;
+    --foreground: 195 40% 96%;
 
-    --card: 222 47% 7%;
-    --card-foreground: 210 40% 98%;
+    --card: 210 55% 8%;
+    --card-foreground: 195 40% 96%;
 
-    --popover: 222 47% 7%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 210 55% 8%;
+    --popover-foreground: 195 40% 96%;
 
-    /* Trust & Quality colors - Deep Blue/Indigo palette */
-    --primary: 217 91% 60%;
-    --primary-foreground: 220 40% 5%;
+    /* Ocean Blue palette - Dark mode */
+    --primary: 195 85% 55%;
+    --primary-foreground: 210 60% 6%;
 
-    --secondary: 222 47% 11%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 210 50% 12%;
+    --secondary-foreground: 195 40% 96%;
 
-    --muted: 222 47% 12%;
-    --muted-foreground: 215 20% 55%;
+    --muted: 210 45% 14%;
+    --muted-foreground: 195 30% 55%;
 
-    --accent: 199 89% 55%;
-    --accent-foreground: 220 40% 5%;
+    --accent: 185 80% 50%;
+    --accent-foreground: 210 60% 6%;
 
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 195 40% 96%;
 
-    --border: 222 47% 14%;
-    --input: 222 47% 14%;
-    --ring: 217 91% 60%;
+    --border: 210 45% 16%;
+    --input: 210 45% 16%;
+    --ring: 195 85% 55%;
 
-    /* Chart colors for dark mode */
-    --chart-1: 217 91% 60%;
-    --chart-2: 199 89% 55%;
-    --chart-3: 168 76% 48%;
-    --chart-4: 43 74% 56%;
-    --chart-5: 12 76% 61%;
+    /* Chart colors - Ocean dark mode */
+    --chart-1: 195 85% 55%;
+    --chart-2: 185 80% 50%;
+    --chart-3: 170 70% 50%;
+    --chart-4: 200 65% 55%;
+    --chart-5: 215 75% 60%;
+
+    /* Ocean theme colors - Dark mode */
+    --ocean: 205 70% 30%;
+    --ocean-light: 200 60% 40%;
+    --ocean-deep: 210 80% 8%;
+    --ocean-dark: 215 85% 5%;
+    --ocean-wave: 200 70% 45%;
+    --ocean-wave-dark: 205 65% 35%;
+    --ocean-foam: 195 50% 75%;
+    --ocean-foam-dark: 200 40% 55%;
+    --ocean-glow: 195 90% 55%;
 
     /* Custom brand colors */
-    --blue-primary: 217 91% 60%;
-    --blue-deep: 224 71% 45%;
-    --cyan: 199 89% 55%;
-    --indigo: 234 89% 68%;
-    --navy-deep: 222 47% 3%;
-    --glass: 222 47% 9%;
-    --glass-border: 222 47% 18%;
-    --success: 142 71% 45%;
+    --blue-primary: 195 85% 55%;
+    --blue-deep: 205 75% 45%;
+    --cyan: 185 80% 50%;
+    --cyan-glow: 185 85% 55%;
+    --cyan-muted: 185 50% 40%;
+    --indigo: 220 70% 55%;
+    --navy-deep: 215 70% 5%;
+    --glass: 210 50% 10%;
+    --glass-border: 210 45% 20%;
+    --success: 165 70% 45%;
     --warning: 38 92% 50%;
 
-    /* Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(234 89% 68%) 50%, hsl(199 89% 55%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(222 47% 7%) 0%, hsl(222 47% 5%) 100%);
-    --gradient-glass: linear-gradient(135deg, hsl(222 47% 10% / 0.7) 0%, hsl(222 47% 7% / 0.5) 100%);
-    --gradient-hero: radial-gradient(ellipse at 50% 0%, hsl(217 91% 60% / 0.18) 0%, transparent 50%);
+    /* Ocean Gradients - Dark mode */
+    --gradient-primary: linear-gradient(135deg, hsl(195 85% 55%) 0%, hsl(185 80% 50%) 50%, hsl(200 90% 55%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(210 55% 8%) 0%, hsl(210 60% 6%) 100%);
+    --gradient-glass: linear-gradient(135deg, hsl(210 50% 12% / 0.8) 0%, hsl(210 55% 8% / 0.6) 100%);
+    --gradient-hero: radial-gradient(ellipse at 50% 0%, hsl(195 85% 55% / 0.2) 0%, transparent 60%);
+    --gradient-ocean: linear-gradient(180deg, hsl(210 60% 6%) 0%, hsl(205 70% 12%) 50%, hsl(200 75% 18%) 100%);
 
-    /* Premium shadows */
-    --shadow-glow: 0 0 80px hsl(217 91% 60% / 0.35);
-    --shadow-card: 0 4px 32px hsl(0 0% 0% / 0.4);
-    --shadow-button: 0 4px 20px hsl(217 91% 60% / 0.35);
-    --shadow-elevated: 0 12px 40px hsl(0 0% 0% / 0.3);
+    /* Ocean shadows - Dark mode */
+    --shadow-glow: 0 0 80px hsl(195 85% 55% / 0.3);
+    --shadow-card: 0 4px 32px hsl(0 0% 0% / 0.5);
+    --shadow-button: 0 4px 20px hsl(195 85% 55% / 0.4);
+    --shadow-elevated: 0 12px 40px hsl(0 0% 0% / 0.4);
+    --shadow-wave: 0 -10px 40px hsl(195 85% 55% / 0.2);
 
-    --sidebar-background: 222 47% 5%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 217 91% 60%;
-    --sidebar-primary-foreground: 220 40% 5%;
-    --sidebar-accent: 222 47% 11%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 222 47% 14%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-background: 210 60% 6%;
+    --sidebar-foreground: 195 40% 96%;
+    --sidebar-primary: 195 85% 55%;
+    --sidebar-primary-foreground: 210 60% 6%;
+    --sidebar-accent: 210 50% 12%;
+    --sidebar-accent-foreground: 195 40% 96%;
+    --sidebar-border: 210 45% 16%;
+    --sidebar-ring: 195 85% 55%;
   }
 }
 
@@ -258,6 +288,30 @@
     background-size: 200% 100%;
   }
 
+  .animate-wave-slow {
+    animation: wave 12s ease-in-out infinite;
+  }
+
+  .animate-wave-medium {
+    animation: wave 8s ease-in-out infinite reverse;
+  }
+
+  .animate-wave-fast {
+    animation: wave 6s ease-in-out infinite;
+  }
+
+  .animate-wave-foam {
+    animation: wave-foam 4s ease-in-out infinite;
+  }
+
+  .animate-bubble {
+    animation: bubble 5s ease-in-out infinite;
+  }
+
+  .animate-ripple {
+    animation: ripple 2s ease-out infinite;
+  }
+
   .bg-success {
     background-color: hsl(var(--success));
   }
@@ -272,6 +326,10 @@
 
   .text-warning {
     color: hsl(var(--warning));
+  }
+
+  .bg-gradient-radial {
+    background: radial-gradient(circle at center, var(--tw-gradient-stops));
   }
 }
 
@@ -304,6 +362,55 @@
 @keyframes shimmer {
   0% { background-position: -200% 0; }
   100% { background-position: 200% 0; }
+}
+
+@keyframes wave {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+  }
+  25% {
+    transform: translateX(-2%) translateY(3px);
+  }
+  50% {
+    transform: translateX(-4%) translateY(0);
+  }
+  75% {
+    transform: translateX(-2%) translateY(-3px);
+  }
+}
+
+@keyframes wave-foam {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+  }
+  50% {
+    transform: translateX(-1%) translateY(-2px);
+  }
+}
+
+@keyframes bubble {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(-200px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(1);
+    opacity: 0.4;
+  }
+  100% {
+    transform: scale(2);
+    opacity: 0;
+  }
 }
 
 /* Hide scrollbar but keep functionality */
