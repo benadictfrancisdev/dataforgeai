@@ -188,6 +188,60 @@ export type Database = {
           },
         ]
       }
+      database_connections: {
+        Row: {
+          connection_status: string | null
+          created_at: string
+          database_name: string
+          db_type: string
+          encrypted_password: string
+          host: string
+          id: string
+          is_active: boolean
+          last_connected_at: string | null
+          name: string
+          port: number
+          ssl_enabled: boolean
+          updated_at: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          connection_status?: string | null
+          created_at?: string
+          database_name: string
+          db_type: string
+          encrypted_password: string
+          host: string
+          id?: string
+          is_active?: boolean
+          last_connected_at?: string | null
+          name: string
+          port: number
+          ssl_enabled?: boolean
+          updated_at?: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          connection_status?: string | null
+          created_at?: string
+          database_name?: string
+          db_type?: string
+          encrypted_password?: string
+          host?: string
+          id?: string
+          is_active?: boolean
+          last_connected_at?: string | null
+          name?: string
+          port?: number
+          ssl_enabled?: boolean
+          updated_at?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
       datasets: {
         Row: {
           cleaned_data: Json | null
@@ -344,6 +398,53 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      saved_queries: {
+        Row: {
+          connection_id: string | null
+          created_at: string
+          execution_count: number | null
+          generated_sql: string
+          id: string
+          is_favorite: boolean | null
+          last_executed_at: string | null
+          name: string
+          natural_language_query: string
+          user_id: string
+        }
+        Insert: {
+          connection_id?: string | null
+          created_at?: string
+          execution_count?: number | null
+          generated_sql: string
+          id?: string
+          is_favorite?: boolean | null
+          last_executed_at?: string | null
+          name: string
+          natural_language_query: string
+          user_id: string
+        }
+        Update: {
+          connection_id?: string | null
+          created_at?: string
+          execution_count?: number | null
+          generated_sql?: string
+          id?: string
+          is_favorite?: boolean | null
+          last_executed_at?: string | null
+          name?: string
+          natural_language_query?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_queries_connection_id_fkey"
+            columns: ["connection_id"]
+            isOneToOne: false
+            referencedRelation: "database_connections"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scheduled_jobs: {
         Row: {
