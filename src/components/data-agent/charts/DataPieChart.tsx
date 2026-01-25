@@ -8,15 +8,16 @@ interface DataPieChartProps {
   title: string;
 }
 
-const COLORS = [
-  "hsl(var(--primary))",
-  "hsl(180, 80%, 45%)",
-  "hsl(280, 80%, 55%)",
-  "hsl(45, 95%, 50%)",
-  "hsl(340, 85%, 50%)",
-  "hsl(160, 70%, 45%)",
-  "hsl(200, 85%, 55%)",
-  "hsl(30, 90%, 55%)",
+// Tableau-inspired color palette
+const TABLEAU_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+  "hsl(var(--chart-6))",
+  "hsl(var(--chart-7))",
+  "hsl(var(--chart-8))",
 ];
 
 const DataPieChart = ({ data, valueKey, nameKey, title }: DataPieChartProps) => {
@@ -40,12 +41,16 @@ const DataPieChart = ({ data, valueKey, nameKey, title }: DataPieChartProps) => 
     if (active && payload && payload.length) {
       const percentage = ((payload[0].value / total) * 100).toFixed(1);
       return (
-        <div className="bg-card/95 backdrop-blur-xl border border-border/50 rounded-xl px-4 py-3 shadow-2xl">
-          <p className="text-xs font-medium text-muted-foreground mb-1">{payload[0].name}</p>
-          <p className="text-lg font-bold text-foreground">
-            {payload[0].value.toLocaleString()}
-          </p>
-          <p className="text-xs text-primary font-semibold">{percentage}%</p>
+        <div className="bg-card border border-border rounded-md px-3 py-2 shadow-lg">
+          <p className="text-xs font-medium text-foreground mb-1">{payload[0].name}</p>
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-semibold text-foreground">
+              {payload[0].value.toLocaleString()}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              ({percentage}%)
+            </span>
+          </div>
         </div>
       );
     }
@@ -66,7 +71,8 @@ const DataPieChart = ({ data, valueKey, nameKey, title }: DataPieChartProps) => 
         fill="white" 
         textAnchor="middle" 
         dominantBaseline="central"
-        className="text-xs font-bold drop-shadow-lg"
+        className="text-xs font-medium"
+        style={{ textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}
       >
         {`${(percent * 100).toFixed(0)}%`}
       </text>
@@ -74,55 +80,45 @@ const DataPieChart = ({ data, valueKey, nameKey, title }: DataPieChartProps) => 
   };
 
   return (
-    <Card className="bg-gradient-to-br from-card via-card to-muted/20 border-border/50 h-full overflow-hidden group hover:shadow-xl transition-shadow duration-500">
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+    <Card className="linear-card h-full">
+      <CardHeader className="pb-2 border-b border-border">
+        <CardTitle className="text-sm font-semibold text-foreground flex items-center justify-between">
           {title}
+          <span className="text-xs font-normal text-muted-foreground">
+            {chartData.length} categories
+          </span>
         </CardTitle>
       </CardHeader>
-      <CardContent className="pt-0">
+      <CardContent className="pt-4">
         <ResponsiveContainer width="100%" height={280}>
           <PieChart>
-            <defs>
-              {COLORS.map((color, index) => (
-                <linearGradient key={index} id={`pieGradient${index}`} x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor={color} stopOpacity={1} />
-                  <stop offset="100%" stopColor={color} stopOpacity={0.7} />
-                </linearGradient>
-              ))}
-              <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="4" stdDeviation="8" floodOpacity="0.3"/>
-              </filter>
-            </defs>
             <Pie
               data={chartData}
               cx="50%"
               cy="45%"
-              innerRadius={55}
-              outerRadius={90}
-              paddingAngle={4}
+              innerRadius={50}
+              outerRadius={85}
+              paddingAngle={2}
               dataKey="value"
               labelLine={false}
               label={renderCustomLabel}
-              filter="url(#shadow)"
-              animationDuration={800}
+              animationDuration={600}
               animationEasing="ease-out"
             >
               {chartData.map((_, index) => (
                 <Cell 
                   key={`cell-${index}`} 
-                  fill={`url(#pieGradient${index % COLORS.length})`}
+                  fill={TABLEAU_COLORS[index % TABLEAU_COLORS.length]}
                   stroke="hsl(var(--background))"
                   strokeWidth={2}
-                  className="transition-all duration-300 hover:opacity-80"
+                  className="transition-opacity duration-200 hover:opacity-80"
                 />
               ))}
             </Pie>
             <Tooltip content={<CustomTooltip />} />
             <Legend 
-              wrapperStyle={{ fontSize: 11, paddingTop: 10 }}
-              formatter={(value) => <span className="text-muted-foreground font-medium">{value}</span>}
+              wrapperStyle={{ fontSize: 11, paddingTop: 8 }}
+              formatter={(value) => <span className="text-muted-foreground text-xs">{value}</span>}
               iconType="circle"
               iconSize={8}
             />
