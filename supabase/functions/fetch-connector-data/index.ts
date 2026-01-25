@@ -1,5 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { S3Client, GetObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,7 +9,7 @@ const corsHeaders = {
 };
 
 interface ConnectorRequest {
-  type: 'google_sheets' | 'csv_url' | 'json_api' | 'airtable' | 'notion';
+  type: 'google_sheets' | 'csv_url' | 'json_api' | 'airtable' | 'notion' | 'webhook' | 's3';
   config: Record<string, string>;
 }
 
@@ -272,6 +274,160 @@ async function fetchNotion(config: Record<string, string>): Promise<Record<strin
   });
 }
 
+async function fetchWebhookData(config: Record<string, string>): Promise<Record<string, unknown>[]> {
+  const { webhookId, limit, userId } = config;
+  
+  if (!webhookId) {
+    throw new Error('Webhook ID is required');
+  }
+
+  console.log(`Fetching webhook data for: ${webhookId}`);
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+  const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+  let query = supabase
+    .from('webhook_data')
+    .select('payload, received_at, source_ip')
+    .eq('webhook_id', webhookId)
+    .order('received_at', { ascending: false })
+    .limit(parseInt(limit) || 100);
+
+  // If userId is provided, filter by it for security
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.error('Webhook data fetch error:', error);
+    throw new Error(`Failed to fetch webhook data: ${error.message}`);
+  }
+
+  console.log(`Fetched ${data?.length || 0} webhook records`);
+
+  // Flatten payload and add metadata
+  return (data || []).map(row => ({
+    ...(typeof row.payload === 'object' ? row.payload : { data: row.payload }),
+    _received_at: row.received_at,
+    _source_ip: row.source_ip,
+  }));
+}
+
+async function fetchS3Data(config: Record<string, string>): Promise<Record<string, unknown>[]> {
+  const { bucket, region, accessKey, secretKey, prefix, fileKey } = config;
+  
+  if (!bucket) {
+    throw new Error('S3 bucket name is required');
+  }
+  
+  if (!region) {
+    throw new Error('AWS region is required');
+  }
+  
+  if (!accessKey || !secretKey) {
+    throw new Error('AWS credentials (accessKey and secretKey) are required');
+  }
+
+  console.log(`Connecting to S3: bucket=${bucket}, region=${region}`);
+
+  // Create S3 client
+  const s3 = new S3Client({
+    region,
+    credentials: {
+      accessKeyId: accessKey,
+      secretAccessKey: secretKey,
+    },
+  });
+
+  // If specific file requested
+  if (fileKey) {
+    console.log(`Fetching specific file: ${fileKey}`);
+    return await fetchS3File(s3, bucket, fileKey);
+  }
+
+  // List files in prefix and fetch latest CSV/JSON
+  console.log(`Listing files with prefix: ${prefix || '(root)'}`);
+  
+  const listCommand = new ListObjectsV2Command({
+    Bucket: bucket,
+    Prefix: prefix || '',
+    MaxKeys: 100,
+  });
+
+  const listResult = await s3.send(listCommand);
+  
+  const files = (listResult.Contents || [])
+    .filter(f => f.Key && (f.Key.endsWith('.csv') || f.Key.endsWith('.json')))
+    .sort((a, b) => (b.LastModified?.getTime() || 0) - (a.LastModified?.getTime() || 0));
+
+  console.log(`Found ${files.length} CSV/JSON files`);
+
+  if (files.length === 0) {
+    throw new Error('No CSV or JSON files found in bucket/prefix');
+  }
+
+  // Fetch the most recent file
+  const latestFile = files[0];
+  console.log(`Fetching latest file: ${latestFile.Key}`);
+  
+  return await fetchS3File(s3, bucket, latestFile.Key!);
+}
+
+async function fetchS3File(s3: S3Client, bucket: string, key: string): Promise<Record<string, unknown>[]> {
+  const getCommand = new GetObjectCommand({ Bucket: bucket, Key: key });
+  
+  try {
+    const response = await s3.send(getCommand);
+    
+    // Convert stream to string
+    const chunks: Uint8Array[] = [];
+    const reader = response.Body?.transformToWebStream().getReader();
+    
+    if (!reader) {
+      throw new Error('Failed to read S3 object');
+    }
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      chunks.push(value);
+    }
+
+    const body = new TextDecoder().decode(
+      chunks.reduce((acc, chunk) => {
+        const tmp = new Uint8Array(acc.length + chunk.length);
+        tmp.set(acc);
+        tmp.set(chunk, acc.length);
+        return tmp;
+      }, new Uint8Array())
+    );
+
+    if (!body) {
+      throw new Error('Empty file');
+    }
+
+    console.log(`Received ${body.length} bytes from S3`);
+
+    // Parse based on file extension
+    if (key.endsWith('.json')) {
+      const parsed = JSON.parse(body);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } else if (key.endsWith('.csv')) {
+      return parseCSV(body, true);
+    } else {
+      throw new Error(`Unsupported file type: ${key}`);
+    }
+  } catch (error) {
+    if (error instanceof Error && error.name === 'NoSuchKey') {
+      throw new Error(`File not found: ${key}`);
+    }
+    throw error;
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -300,6 +456,12 @@ serve(async (req) => {
         break;
       case 'notion':
         data = await fetchNotion(config);
+        break;
+      case 'webhook':
+        data = await fetchWebhookData(config);
+        break;
+      case 's3':
+        data = await fetchS3Data(config);
         break;
       default:
         throw new Error(`Unsupported connector type: ${type}`);
