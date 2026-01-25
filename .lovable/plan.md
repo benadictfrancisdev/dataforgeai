@@ -1,353 +1,528 @@
 
+# Implementation Plan: Real Backend for Webhook, S3, and Database Connectors
 
-# Implementation Plan: Enhanced UX Features
-
-This plan covers adding Excel support, interactive onboarding, loading skeletons, virtual scrolling for 100K+ rows, and an interactive tutorial system.
-
----
-
-## Overview
-
-| Feature | Priority | Complexity | New Dependencies |
-|---------|----------|------------|------------------|
-| Excel (XLSX) Support | High | Low | `xlsx` (SheetJS) |
-| Loading Skeletons | High | Low | None |
-| Virtual Scrolling (100K+ rows) | High | Medium | `@tanstack/react-virtual` |
-| Interactive Onboarding | Medium | Medium | None |
-| Interactive Tutorial | Medium | Medium | None |
+This plan implements fully functional backend edge functions for three incomplete connectors: Webhook endpoint, Amazon S3 integration, and real database query execution.
 
 ---
 
-## 1. Excel (XLSX) File Support
+## Current State Analysis
 
-**Current State**: Only CSV and JSON are supported in `DataUpload.tsx` (lines 55-60).
-
-**Changes**:
-
-### A. Install SheetJS Library
-```bash
-npm install xlsx
-```
-
-### B. Update DataUpload.tsx
-- Add `parseExcel` function using SheetJS
-- Update file input to accept `.xlsx, .xls` extensions
-- Update UI text to reflect Excel support
-
-```text
-File: src/components/data-agent/DataUpload.tsx
-
-Changes:
-1. Import xlsx library
-2. Add parseExcel function:
-   - Read file as ArrayBuffer
-   - Parse workbook with XLSX.read()
-   - Extract first sheet data with XLSX.utils.sheet_to_json()
-3. Update processFile() to handle .xlsx/.xls extensions
-4. Update accept attribute: ".csv,.json,.xlsx,.xls"
-5. Update UI text: "Supports CSV, Excel, and JSON formats"
-```
+| Connector | Frontend | Backend | Status |
+|-----------|----------|---------|--------|
+| Webhook | Form UI exists | No endpoint | Placeholder |
+| Amazon S3 | Form UI exists | No handler | Placeholder |
+| Database | Full UI + NL-to-SQL | Query returns demo data | Partial |
 
 ---
 
-## 2. Loading Skeletons
+## 1. Webhook Endpoint Edge Function
 
-**Current State**: Basic spinner used during loading. Skeleton component exists but unused.
+**Goal**: Create a real webhook endpoint that receives POST data, stores it, and makes it available for analysis.
 
-**Changes**:
+### A. New Edge Function: `webhook-receiver`
 
-### A. Create Reusable Skeleton Components
 ```text
-New File: src/components/data-agent/skeletons/index.ts
-New File: src/components/data-agent/skeletons/TableSkeleton.tsx
-New File: src/components/data-agent/skeletons/ChartSkeleton.tsx
-New File: src/components/data-agent/skeletons/DashboardSkeleton.tsx
-```
-
-### B. TableSkeleton Component
-- Skeleton header row with animated cells
-- 8-10 skeleton body rows
-- Shimmer animation matching table structure
-
-### C. ChartSkeleton Component
-- Skeleton for bar/line/pie charts
-- Animated placeholder for chart area
-- Skeleton legend items
-
-### D. DashboardSkeleton Component
-- Grid of KPI card skeletons
-- Chart placeholder skeletons
-- Sidebar skeleton
-
-### E. Integration Points
-```text
-Files to Update:
-- src/components/data-agent/DataPreview.tsx (add TableSkeleton)
-- src/components/data-agent/VisualizationDashboard.tsx (add ChartSkeleton)
-- src/components/data-agent/PowerBIDashboard.tsx (add DashboardSkeleton)
-- src/pages/DataAgent.tsx (loading state skeleton)
-```
-
----
-
-## 3. Virtual Scrolling for Large Datasets
-
-**Current State**: Table displays only 10 rows (hardcoded slice). Cannot handle large datasets.
-
-**Changes**:
-
-### A. Install TanStack Virtual
-```bash
-npm install @tanstack/react-virtual
-```
-
-### B. Create VirtualTable Component
-```text
-New File: src/components/data-agent/VirtualTable.tsx
+New File: supabase/functions/webhook-receiver/index.ts
 
 Features:
-- Uses useVirtualizer hook from @tanstack/react-virtual
-- Fixed row height (40px) for performance
-- Overscan of 10 rows for smooth scrolling
-- Sticky header support
-- Column width auto-sizing
-- Row count display in footer
+- Unique webhook URL per user/connection
+- POST data validation and parsing
+- JSON and form-urlencoded support
+- Rate limiting per webhook
+- Data storage in Supabase
+- Real-time notification capability
+```
+
+### B. Database Table for Webhook Data
+
+```sql
+CREATE TABLE webhook_data (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  webhook_id TEXT NOT NULL,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  payload JSONB NOT NULL,
+  headers JSONB,
+  source_ip TEXT,
+  received_at TIMESTAMPTZ DEFAULT now(),
+  processed BOOLEAN DEFAULT false
+);
+
+CREATE INDEX idx_webhook_data_webhook_id ON webhook_data(webhook_id);
+CREATE INDEX idx_webhook_data_user_id ON webhook_data(user_id);
+
+ALTER TABLE webhook_data ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their webhook data"
+  ON webhook_data FOR SELECT
+  USING (auth.uid() = user_id);
 ```
 
 ### C. Implementation Details
+
 ```typescript
 // Key implementation pattern
-const rowVirtualizer = useVirtualizer({
-  count: data.length,
-  getScrollElement: () => containerRef.current,
-  estimateSize: () => 40,
-  overscan: 10,
+serve(async (req) => {
+  // Extract webhook ID from URL path
+  const url = new URL(req.url);
+  const webhookId = url.pathname.split('/').pop();
+  
+  // Validate webhook exists and get user
+  const webhook = await getWebhookConfig(webhookId);
+  
+  // Parse incoming data (JSON or form)
+  const contentType = req.headers.get('content-type');
+  let payload;
+  if (contentType?.includes('application/json')) {
+    payload = await req.json();
+  } else if (contentType?.includes('form')) {
+    const formData = await req.formData();
+    payload = Object.fromEntries(formData);
+  }
+  
+  // Store in database
+  await supabase.from('webhook_data').insert({
+    webhook_id: webhookId,
+    user_id: webhook.user_id,
+    payload,
+    headers: Object.fromEntries(req.headers),
+    source_ip: req.headers.get('x-forwarded-for')
+  });
+  
+  return new Response(JSON.stringify({ received: true }));
 });
 ```
 
-### D. Update DataPreview.tsx
-- Replace static table with VirtualTable component
-- Add "Show All" toggle (virtual vs preview mode)
-- Display accurate row counts
-- Add performance indicator for large datasets
+### D. Update fetch-connector-data Function
 
-### E. Performance Optimizations
-- Memoize row components with React.memo
-- Use CSS containment for better rendering
-- Lazy column rendering for wide tables
-- Debounced search/filter within virtual list
+Add webhook type handler to retrieve stored webhook data:
+
+```typescript
+case 'webhook':
+  return await fetchWebhookData(config);
+
+async function fetchWebhookData(config: Record<string, string>) {
+  const { webhookId, limit } = config;
+  
+  const { data } = await supabase
+    .from('webhook_data')
+    .select('payload, received_at')
+    .eq('webhook_id', webhookId)
+    .order('received_at', { ascending: false })
+    .limit(parseInt(limit) || 100);
+  
+  return data?.map(row => ({
+    ...row.payload,
+    _received_at: row.received_at
+  })) || [];
+}
+```
 
 ---
 
-## 4. Interactive Onboarding System
+## 2. Amazon S3 Connector Edge Function
 
-**Current State**: Demo modal exists but no first-login detection or guided flow.
+**Goal**: Connect to S3 buckets and fetch CSV/JSON files using AWS SDK.
 
-**Changes**:
+### A. Update fetch-connector-data Function
 
-### A. Create Onboarding Hook
-```text
-New File: src/hooks/useOnboarding.tsx
+Add S3 handler using AWS SDK v3 for Deno:
 
-Features:
-- Track if user has completed onboarding (localStorage + database)
-- Step-by-step state machine
-- Progress tracking
-- Skip/complete functionality
-```
-
-### B. Create OnboardingProvider Component
-```text
-New File: src/components/onboarding/OnboardingProvider.tsx
-
-Manages:
-- Global onboarding state
-- Step transitions
-- Completion tracking
-```
-
-### C. Create OnboardingOverlay Component
-```text
-New File: src/components/onboarding/OnboardingOverlay.tsx
-
-Features:
-- Spotlight effect on target elements
-- Tooltip with step instructions
-- Progress indicators (dots)
-- Next/Skip/Back buttons
-- Keyboard navigation (arrows, Esc)
-```
-
-### D. Onboarding Steps Definition
 ```typescript
-const ONBOARDING_STEPS = [
-  {
-    id: 'welcome',
-    title: 'Welcome to DataForge AI',
-    description: 'Let\'s take a quick tour of the platform',
-    target: null, // Full screen
-    position: 'center'
-  },
-  {
-    id: 'upload',
-    title: 'Upload Your Data',
-    description: 'Start by uploading a CSV, Excel, or JSON file',
-    target: '[data-onboarding="upload-zone"]',
-    position: 'bottom'
-  },
-  {
-    id: 'sample-data',
-    title: 'Try Sample Data',
-    description: 'No data? Click here to load a sample dataset',
-    target: '[data-onboarding="sample-button"]',
-    position: 'right'
-  },
-  {
-    id: 'sidebar',
-    title: 'Navigate Features',
-    description: 'Use the sidebar to access different analysis tools',
-    target: '[data-onboarding="sidebar"]',
-    position: 'right'
-  },
-  {
-    id: 'complete',
-    title: 'You\'re All Set!',
-    description: 'Explore the features and analyze your data',
-    target: null,
-    position: 'center'
+// Import AWS SDK (works in Deno via npm: specifier)
+import { S3Client, GetObjectCommand, ListObjectsV2Command } from "npm:@aws-sdk/client-s3@3";
+
+case 's3':
+  return await fetchS3Data(config);
+
+async function fetchS3Data(config: Record<string, string>) {
+  const { bucket, region, accessKey, secretKey, prefix, fileKey } = config;
+  
+  // Create S3 client
+  const s3 = new S3Client({
+    region,
+    credentials: {
+      accessKeyId: accessKey,
+      secretAccessKey: secretKey,
+    }
+  });
+  
+  // If specific file requested
+  if (fileKey) {
+    return await fetchS3File(s3, bucket, fileKey);
   }
+  
+  // List files in prefix and fetch latest CSV/JSON
+  const listCommand = new ListObjectsV2Command({
+    Bucket: bucket,
+    Prefix: prefix,
+    MaxKeys: 100
+  });
+  
+  const listResult = await s3.send(listCommand);
+  const files = (listResult.Contents || [])
+    .filter(f => f.Key?.endsWith('.csv') || f.Key?.endsWith('.json'))
+    .sort((a, b) => (b.LastModified?.getTime() || 0) - (a.LastModified?.getTime() || 0));
+  
+  if (files.length === 0) {
+    throw new Error('No CSV or JSON files found in bucket/prefix');
+  }
+  
+  return await fetchS3File(s3, bucket, files[0].Key!);
+}
+
+async function fetchS3File(s3: S3Client, bucket: string, key: string) {
+  const getCommand = new GetObjectCommand({ Bucket: bucket, Key: key });
+  const response = await s3.send(getCommand);
+  
+  const body = await response.Body?.transformToString();
+  if (!body) throw new Error('Empty file');
+  
+  if (key.endsWith('.json')) {
+    const parsed = JSON.parse(body);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } else {
+    // CSV parsing
+    return parseCSV(body, true);
+  }
+}
+```
+
+### B. Security Considerations
+
+- AWS credentials passed per-request (not stored as secrets)
+- User provides credentials in connector config
+- Optional: Store encrypted credentials in database like database connections
+
+---
+
+## 3. Real Database Query Execution
+
+**Goal**: Enable actual SQL execution against connected PostgreSQL/MySQL databases.
+
+### A. PostgreSQL Support via Deno postgres Driver
+
+```typescript
+// Import Deno postgres driver
+import { Client } from "https://deno.land/x/postgres@v0.17.0/mod.ts";
+
+async function executePostgresQuery(
+  connection: DatabaseConnection,
+  sql: string,
+  encryptionKey: string
+): Promise<{ results: Record<string, unknown>[]; rowCount: number }> {
+  const password = decryptPassword(connection.encrypted_password, encryptionKey);
+  
+  const client = new Client({
+    hostname: connection.host,
+    port: connection.port,
+    database: connection.database_name,
+    user: connection.username,
+    password: password,
+    tls: connection.ssl_enabled ? { enabled: true } : undefined,
+  });
+  
+  try {
+    await client.connect();
+    
+    const result = await client.queryObject<Record<string, unknown>>(sql);
+    
+    return {
+      results: result.rows,
+      rowCount: result.rowCount || 0
+    };
+  } finally {
+    await client.end();
+  }
+}
+```
+
+### B. MySQL Support via mysql2 npm Package
+
+```typescript
+import { createConnection } from "npm:mysql2/promise";
+
+async function executeMySQLQuery(
+  connection: DatabaseConnection,
+  sql: string,
+  encryptionKey: string
+): Promise<{ results: Record<string, unknown>[]; rowCount: number }> {
+  const password = decryptPassword(connection.encrypted_password, encryptionKey);
+  
+  const conn = await createConnection({
+    host: connection.host,
+    port: connection.port,
+    database: connection.database_name,
+    user: connection.username,
+    password: password,
+    ssl: connection.ssl_enabled ? {} : undefined,
+  });
+  
+  try {
+    const [rows] = await conn.query(sql);
+    return {
+      results: rows as Record<string, unknown>[],
+      rowCount: Array.isArray(rows) ? rows.length : 0
+    };
+  } finally {
+    await conn.end();
+  }
+}
+```
+
+### C. Update db-connect Query Handler
+
+Replace the demo response with real execution:
+
+```typescript
+case 'query': {
+  if (!body.sql) {
+    return errorResponse('SQL query required');
+  }
+
+  // Validate SQL (already implemented)
+  const validation = validateSqlQuery(body.sql);
+  if (!validation.valid) {
+    return errorResponse(validation.reason);
+  }
+
+  // Get connection details
+  const { data: connection } = await supabase
+    .from('database_connections')
+    .select('*')
+    .eq('id', body.connectionId)
+    .eq('user_id', userId)
+    .single();
+
+  if (!connection) {
+    return errorResponse('Connection not found', 404);
+  }
+
+  // Add LIMIT if not present
+  let sql = body.sql;
+  if (!sql.toUpperCase().includes('LIMIT')) {
+    sql = sql.replace(/;?\s*$/, ' LIMIT 1000;');
+  }
+
+  // Execute based on database type
+  let result;
+  switch (connection.db_type) {
+    case 'postgresql':
+      result = await executePostgresQuery(connection, sql, encryptionKey);
+      break;
+    case 'mysql':
+      result = await executeMySQLQuery(connection, sql, encryptionKey);
+      break;
+    default:
+      return errorResponse(`Query execution not supported for ${connection.db_type}`);
+  }
+
+  // Update last_connected_at
+  await supabase
+    .from('database_connections')
+    .update({ last_connected_at: new Date().toISOString() })
+    .eq('id', body.connectionId);
+
+  return successResponse({
+    success: true,
+    sql: body.sql,
+    results: result.results,
+    rowCount: result.rowCount,
+    columns: result.results.length > 0 ? Object.keys(result.results[0]) : []
+  });
+}
+```
+
+### D. Real Table Listing
+
+```typescript
+case 'list-tables': {
+  const { data: connection } = await supabase
+    .from('database_connections')
+    .select('*')
+    .eq('id', body.connectionId)
+    .eq('user_id', userId)
+    .single();
+
+  if (!connection) {
+    return errorResponse('Connection not found', 404);
+  }
+
+  let sql;
+  switch (connection.db_type) {
+    case 'postgresql':
+      sql = `SELECT table_name FROM information_schema.tables 
+             WHERE table_schema = 'public' ORDER BY table_name`;
+      break;
+    case 'mysql':
+      sql = `SELECT table_name FROM information_schema.tables 
+             WHERE table_schema = DATABASE() ORDER BY table_name`;
+      break;
+    default:
+      return errorResponse(`Table listing not supported for ${connection.db_type}`);
+  }
+
+  const result = await executeQuery(connection, sql, encryptionKey);
+  const tables = result.results.map(row => 
+    Object.values(row)[0] as string
+  );
+
+  return successResponse({ success: true, tables });
+}
+```
+
+### E. Real Schema Retrieval
+
+```typescript
+case 'get-schema': {
+  const { data: connection } = await supabase
+    .from('database_connections')
+    .select('*')
+    .eq('id', body.connectionId)
+    .eq('user_id', userId)
+    .single();
+
+  let sql;
+  switch (connection.db_type) {
+    case 'postgresql':
+      sql = `SELECT column_name, data_type, is_nullable, column_default
+             FROM information_schema.columns 
+             WHERE table_name = '${body.tableName}' 
+             AND table_schema = 'public'
+             ORDER BY ordinal_position`;
+      break;
+    case 'mysql':
+      sql = `SELECT column_name, data_type, is_nullable, column_default
+             FROM information_schema.columns 
+             WHERE table_name = '${body.tableName}'
+             AND table_schema = DATABASE()
+             ORDER BY ordinal_position`;
+      break;
+  }
+
+  const result = await executeQuery(connection, sql, encryptionKey);
+  
+  return successResponse({
+    success: true,
+    schema: {
+      tableName: body.tableName,
+      columns: result.results.map(col => ({
+        name: col.column_name,
+        type: col.data_type,
+        nullable: col.is_nullable === 'YES',
+        default: col.column_default
+      }))
+    }
+  });
+}
+```
+
+---
+
+## 4. Frontend Updates
+
+### A. Update WorkflowBuilder.tsx
+
+Update the webhook form to show the real webhook URL:
+
+```typescript
+webhook: (
+  <div className="space-y-4">
+    <div className="space-y-2">
+      <Label>Connection Name</Label>
+      <Input ... />
+    </div>
+    <div className="p-4 rounded-lg bg-muted/50 border">
+      <p className="text-sm font-medium mb-2">Your Webhook URL</p>
+      <code className="text-xs bg-background px-2 py-1 rounded break-all">
+        {`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-receiver/${webhookId}`}
+      </code>
+      <Button size="sm" variant="outline" onClick={copyToClipboard}>
+        Copy URL
+      </Button>
+    </div>
+  </div>
+)
+```
+
+### B. Add Webhook and S3 to Supported Types
+
+```typescript
+const supportedTypes = [
+  'google_sheets', 'csv_url', 'json_api', 
+  'airtable', 'notion', 'webhook', 's3'  // Add these
 ];
 ```
-
-### E. Sample Datasets Feature
-```text
-New File: src/data/sampleDatasets.ts
-
-Sample Datasets:
-1. Sales Data (500 rows) - Revenue, products, regions
-2. Customer Analytics (300 rows) - Demographics, purchases
-3. Stock Prices (1000 rows) - Time series data
-4. Survey Results (200 rows) - Categorical data
-```
-
-### F. Update DataUpload.tsx
-- Add "Load Sample Data" button
-- Add `data-onboarding` attributes for targeting
-- Trigger onboarding on first visit
-
----
-
-## 5. Interactive Tutorial System
-
-**Current State**: Static demo modal with step descriptions.
-
-**Changes**:
-
-### A. Create Interactive Tutorial Component
-```text
-New File: src/components/tutorial/InteractiveTutorial.tsx
-
-Features:
-- Step-by-step guided walkthrough
-- Interactive elements (user must perform action)
-- Progress tracking
-- Video/GIF demonstrations embedded
-- Accessible via Help menu anytime
-```
-
-### B. Tutorial Steps (Feature-Specific)
-```typescript
-const TUTORIALS = {
-  'data-upload': {
-    steps: [
-      { action: 'click', target: 'upload-button', instruction: 'Click to upload' },
-      { action: 'observe', content: 'Watch your data appear' },
-    ]
-  },
-  'nlp-query': {
-    steps: [
-      { action: 'type', target: 'query-input', instruction: 'Type: "Show sales by region"' },
-      { action: 'click', target: 'submit-button' },
-      { action: 'observe', content: 'See AI-generated insights' },
-    ]
-  },
-  // ... more tutorials
-};
-```
-
-### C. Tutorial Trigger Points
-- First time visiting each feature tab
-- "?" help button in header
-- Contextual help tooltips with "Learn more" links
-
-### D. Update Navbar/Header
-- Add "Help" dropdown menu
-- Tutorial access for each feature
-- "Restart Onboarding" option
 
 ---
 
 ## File Changes Summary
 
-### New Files (11 files)
+### New Files (2 files)
 ```
-src/components/data-agent/skeletons/index.ts
-src/components/data-agent/skeletons/TableSkeleton.tsx
-src/components/data-agent/skeletons/ChartSkeleton.tsx
-src/components/data-agent/skeletons/DashboardSkeleton.tsx
-src/components/data-agent/VirtualTable.tsx
-src/components/onboarding/OnboardingProvider.tsx
-src/components/onboarding/OnboardingOverlay.tsx
-src/components/onboarding/index.ts
-src/components/tutorial/InteractiveTutorial.tsx
-src/hooks/useOnboarding.tsx
-src/data/sampleDatasets.ts
+supabase/functions/webhook-receiver/index.ts
 ```
 
-### Modified Files (6 files)
+### Modified Files (3 files)
 ```
-package.json (add xlsx, @tanstack/react-virtual)
-src/components/data-agent/DataUpload.tsx (Excel + sample data)
-src/components/data-agent/DataPreview.tsx (VirtualTable + skeletons)
-src/pages/DataAgent.tsx (onboarding integration)
-src/App.tsx (OnboardingProvider wrapper)
-src/components/Navbar.tsx (Help menu)
+supabase/functions/fetch-connector-data/index.ts (add webhook + S3 handlers)
+supabase/functions/db-connect/index.ts (real query execution)
+src/components/data-agent/WorkflowBuilder.tsx (update frontend)
+```
+
+### Database Migration (1 migration)
+```
+Create webhook_data table with RLS policies
+```
+
+### Config Update
+```
+supabase/config.toml (add webhook-receiver function)
 ```
 
 ---
 
 ## Technical Considerations
 
-### Performance for 100K+ Rows
-- Virtual scrolling only renders ~30 rows at a time
-- Memory-efficient: No DOM bloat
-- Smooth 60fps scrolling with overscan
-- Search/filter operates on full dataset, renders virtually
+### Security
+- SQL injection prevented by allowing only SELECT statements
+- AWS credentials passed per-request, not stored as global secrets
+- Webhook data isolated per-user via RLS
+- Rate limiting on webhook endpoints (10 req/min default)
 
-### Excel File Size Limits
-- Client-side parsing for files up to 10MB
-- For larger files (10MB+): Show warning, suggest CSV
-- Progressive parsing feedback with progress bar
+### Performance
+- Query results limited to 1000 rows max
+- S3 file size limited to 50MB
+- Connection pooling not available in edge functions (new connection per request)
+- Timeout: 60 seconds for database queries
 
-### Onboarding State Persistence
-- Stored in `user_session_state` table (already exists)
-- Key: `onboarding-completed`
-- Survives across devices when logged in
-
-### Mobile Responsiveness
-- Onboarding overlay adapts to screen size
-- Virtual table scrolls horizontally on mobile
-- Skeleton widths are responsive
+### Limitations
+- MongoDB not supported (would require additional driver)
+- SQLite not supported (file-based, can't connect remotely)
+- Large S3 files may timeout (recommend streaming for files >10MB)
 
 ---
 
 ## Implementation Order
 
-1. **Excel Support** (30 min) - Quick win, high user value
-2. **Loading Skeletons** (45 min) - Improves perceived performance
-3. **Virtual Scrolling** (1 hour) - Unlocks large dataset handling
-4. **Onboarding System** (1.5 hours) - First-user experience
-5. **Interactive Tutorial** (1 hour) - Feature discovery
+1. **Database Migration** - Create webhook_data table
+2. **Webhook Receiver** - New edge function for receiving data
+3. **S3 Handler** - Add to fetch-connector-data
+4. **Database Query Execution** - Update db-connect
+5. **Frontend Updates** - Wire up new functionality
 
-Total estimated time: ~5 hours
+---
 
+## Testing Plan
+
+After implementation, test with:
+
+1. **Webhook**: Send POST to webhook URL with curl
+   ```bash
+   curl -X POST https://[project].supabase.co/functions/v1/webhook-receiver/test-123 \
+     -H "Content-Type: application/json" \
+     -d '{"event": "test", "data": {"value": 42}}'
+   ```
+
+2. **S3**: Connect to a test bucket with CSV file
+
+3. **Database**: Connect to a test PostgreSQL instance and run a query
