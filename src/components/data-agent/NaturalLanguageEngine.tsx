@@ -563,12 +563,18 @@ const NaturalLanguageEngine = ({
                 {/* Insights */}
                 {message.insights && message.insights.length > 0 && (
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {message.insights.map((insight, i) => (
-                      <Badge key={i} variant="secondary" className="text-xs">
-                        <Sparkles className="h-3 w-3 mr-1" />
-                        {insight}
-                      </Badge>
-                    ))}
+                    {message.insights.map((insight, i) => {
+                      // Handle both string and object insights from API
+                      const insightText = typeof insight === 'string' 
+                        ? insight 
+                        : (insight as any)?.description || (insight as any)?.metric || JSON.stringify(insight);
+                      return (
+                        <Badge key={i} variant="secondary" className="text-xs">
+                          <Sparkles className="h-3 w-3 mr-1" />
+                          {insightText}
+                        </Badge>
+                      );
+                    })}
                   </div>
                 )}
               </div>
