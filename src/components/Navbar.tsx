@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import Logo from "@/components/Logo";
+import InteractiveTutorial from "@/components/tutorial/InteractiveTutorial";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +52,7 @@ const Navbar = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-4">
+            <InteractiveTutorial />
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

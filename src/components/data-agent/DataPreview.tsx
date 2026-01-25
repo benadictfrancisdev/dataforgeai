@@ -2,10 +2,11 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Sparkles, CheckCircle, AlertTriangle, Loader2, Download, FileDown } from "lucide-react";
+import { Sparkles, CheckCircle, AlertTriangle, Loader2, Download, FileDown, Table as TableIcon } from "lucide-react";
 import { toast } from "sonner";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import VirtualTable from "./VirtualTable";
+import { TableSkeleton } from "./skeletons";
 import type { DatasetState } from "@/pages/DataAgent";
 
 interface DataPreviewProps {
@@ -44,12 +45,14 @@ const renderReportItem = (item: string | { column?: string; message?: string } |
 const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
   const [isValidating, setIsValidating] = useState(false);
   const [isCleaning, setIsCleaning] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showVirtualTable, setShowVirtualTable] = useState(false);
   const [validationReport, setValidationReport] = useState<ValidationReport | null>(null);
   const [cleaningReport, setCleaningReport] = useState<CleaningReport | null>(null);
   const { exportToCsv, exportToPdf } = usePdfExport();
 
   const displayData = dataset.cleanedData || dataset.rawData;
-  const previewRows = displayData.slice(0, 10);
+  const isLargeDataset = displayData.length > 1000;
 
   const handleExportCsv = () => {
     exportToCsv(displayData, dataset.name);
@@ -301,37 +304,58 @@ const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
       )}
 
       {/* Data Table */}
-      <div className="bg-card/50 rounded-xl border border-border/50 overflow-hidden">
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border/50 hover:bg-transparent">
-                {dataset.columns.map((col) => (
-                  <TableHead key={col} className="text-foreground font-semibold whitespace-nowrap">
-                    {col}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {previewRows.map((row, i) => (
-                <TableRow key={i} className="border-border/30 hover:bg-muted/30">
-                  {dataset.columns.map((col) => (
-                    <TableCell key={col} className="whitespace-nowrap">
-                      {String(row[col] ?? '-')}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-        {displayData.length > 10 && (
-          <div className="p-3 text-center text-sm text-muted-foreground border-t border-border/30">
-            Showing 10 of {displayData.length} rows
+      {isLoading ? (
+        <TableSkeleton rows={8} columns={Math.min(dataset.columns.length, 6)} />
+      ) : showVirtualTable || isLargeDataset ? (
+        <VirtualTable 
+          data={displayData}
+          columns={dataset.columns}
+          height={500}
+        />
+      ) : (
+        <div className="bg-card/50 rounded-xl border border-border/50 overflow-hidden">
+          <div className="p-3 border-b border-border/30 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">
+              Showing {Math.min(10, displayData.length)} of {displayData.length.toLocaleString()} rows
+            </span>
+            {displayData.length > 10 && (
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowVirtualTable(true)}
+                className="gap-2"
+              >
+                <TableIcon className="w-4 h-4" />
+                Show All Rows
+              </Button>
+            )}
           </div>
-        )}
-      </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="border-b border-border/50 bg-muted/30">
+                <tr>
+                  {dataset.columns.map((col) => (
+                    <th key={col} className="text-left px-4 py-3 text-sm font-semibold text-foreground whitespace-nowrap">
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {displayData.slice(0, 10).map((row, i) => (
+                  <tr key={i} className="border-b border-border/30 hover:bg-muted/30">
+                    {dataset.columns.map((col) => (
+                      <td key={col} className="px-4 py-2 text-sm whitespace-nowrap">
+                        {String(row[col] ?? '-')}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
