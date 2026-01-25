@@ -1,6 +1,8 @@
 import { useRef, useMemo, memo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import MobileCardView from "./MobileCardView";
 
 interface VirtualTableProps {
   data: Record<string, unknown>[];
@@ -8,6 +10,7 @@ interface VirtualTableProps {
   height?: number;
   rowHeight?: number;
   className?: string;
+  primaryColumn?: string;
 }
 
 const VirtualTableRow = memo(({ 
@@ -47,8 +50,10 @@ const VirtualTable = ({
   columns, 
   height = 500,
   rowHeight = 40,
-  className 
+  className,
+  primaryColumn
 }: VirtualTableProps) => {
+  const isMobile = useIsMobile();
   const parentRef = useRef<HTMLDivElement>(null);
 
   const rowVirtualizer = useVirtualizer({
@@ -68,6 +73,20 @@ const VirtualTable = ({
     return (
       <div className="flex items-center justify-center h-48 text-muted-foreground">
         No data to display
+      </div>
+    );
+  }
+
+  // Use card view on mobile for better UX
+  if (isMobile) {
+    return (
+      <div className={cn("bg-card/50 rounded-xl border border-border/50 p-3", className)}>
+        <MobileCardView
+          data={data}
+          columns={columns}
+          primaryColumn={primaryColumn}
+          maxVisible={30}
+        />
       </div>
     );
   }

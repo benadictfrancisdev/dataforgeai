@@ -827,8 +827,8 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
   const renderTile = (tile: DashboardTile) => {
     const sizeClasses = {
       small: "col-span-1",
-      medium: "col-span-1 md:col-span-2",
-      large: "col-span-1 md:col-span-2 lg:col-span-3"
+      medium: "col-span-1 sm:col-span-2",
+      large: "col-span-1 sm:col-span-2 lg:col-span-3"
     };
 
     return (
@@ -1138,63 +1138,66 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header */}
       <Card className="bg-gradient-to-br from-cyan-500/10 via-teal-500/5 to-transparent border-cyan-500/30">
-        <CardHeader>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-600 shadow-lg shadow-cyan-500/25">
-                <LayoutDashboard className="h-6 w-6 text-white" />
+        <CardHeader className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <div className="p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br from-cyan-500 to-teal-600 shadow-lg shadow-cyan-500/25">
+                <LayoutDashboard className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
               </div>
               <div>
-                <CardTitle className="text-xl flex items-center gap-2">
-                  Power BI Style Dashboard
-                  <Badge variant="secondary" className="text-xs bg-cyan-500/10 text-cyan-600">
+                <CardTitle className="text-base sm:text-xl flex items-center gap-2 flex-wrap">
+                  <span className="hidden xs:inline">Power BI Style</span>
+                  <span className="xs:hidden">Power BI</span> Dashboard
+                  <Badge variant="secondary" className="text-[10px] sm:text-xs bg-cyan-500/10 text-cyan-600">
                     <Sparkles className="h-3 w-3 mr-1" />
-                    AI-Powered
+                    AI
                   </Badge>
                 </CardTitle>
-                <CardDescription className="mt-1">
+                <CardDescription className="mt-0.5 sm:mt-1 text-xs sm:text-sm hidden sm:block">
                   Enterprise-grade visualizations with one-click generation
                 </CardDescription>
               </div>
             </div>
             
-            <div className="flex items-center gap-2 flex-wrap">
+            {/* Actions - scrollable on mobile */}
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1">
               <Button
                 variant={showProfiling ? "default" : "outline"}
                 size="sm"
                 onClick={() => setShowProfiling(!showProfiling)}
-                className={showProfiling ? "bg-gradient-to-r from-indigo-500 to-purple-600" : ""}
+                className={`shrink-0 text-xs sm:text-sm ${showProfiling ? "bg-gradient-to-r from-indigo-500 to-purple-600" : ""}`}
               >
-                <Brain className="h-4 w-4 mr-2" />
-                Data Profiling
+                <Brain className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Data Profiling</span>
               </Button>
               <Button
                 variant={showDataEditor ? "default" : "outline"}
                 size="sm"
                 onClick={() => setShowDataEditor(!showDataEditor)}
-                className={showDataEditor ? "bg-gradient-to-r from-purple-500 to-pink-600" : ""}
+                className={`shrink-0 text-xs sm:text-sm ${showDataEditor ? "bg-gradient-to-r from-purple-500 to-pink-600" : ""}`}
               >
-                <Edit3 className="h-4 w-4 mr-2" />
-                Edit Data
+                <Edit3 className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Edit Data</span>
               </Button>
               {tiles.length > 0 && (
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleExportPdf}
-                  className="gap-2"
+                  className="gap-1 sm:gap-2 shrink-0 text-xs sm:text-sm"
                 >
                   <FileDown className="h-4 w-4" />
-                  Export PDF
+                  <span className="hidden sm:inline">Export</span>
                 </Button>
               )}
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+                className="shrink-0"
               >
                 {viewMode === "grid" ? <List className="h-4 w-4" /> : <Grid3X3 className="h-4 w-4" />}
               </Button>
@@ -1202,25 +1205,26 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
                 onClick={() => setShowTemplateSelector(true)}
                 variant="outline"
                 size="sm"
-                className="gap-2"
+                className="gap-1 sm:gap-2 shrink-0 text-xs sm:text-sm"
               >
                 <LayoutTemplate className="h-4 w-4" />
-                Templates
+                <span className="hidden sm:inline">Templates</span>
               </Button>
               <Button
                 onClick={() => generateDashboard()}
                 disabled={isGenerating}
-                className="bg-gradient-to-r from-cyan-500 to-teal-600"
+                size="sm"
+                className="bg-gradient-to-r from-cyan-500 to-teal-600 shrink-0 text-xs sm:text-sm gap-1 sm:gap-2"
               >
                 {isGenerating ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Generating...
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="hidden sm:inline">Generating...</span>
                   </>
                 ) : (
                   <>
-                    <Zap className="h-4 w-4 mr-2" />
-                    Generate Dashboard
+                    <Zap className="h-4 w-4" />
+                    <span className="hidden xs:inline">Generate</span>
                   </>
                 )}
               </Button>
@@ -1230,7 +1234,7 @@ const PowerBIDashboard = ({ data, columns, columnTypes, datasetName }: PowerBIDa
       </Card>
 
       {/* Stats Overview */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <Card className="bg-gradient-to-br from-cyan-500/5 to-transparent">
           <CardContent className="pt-4">
             <div className="flex items-center gap-2 text-cyan-600">

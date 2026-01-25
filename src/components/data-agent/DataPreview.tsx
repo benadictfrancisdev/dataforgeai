@@ -162,21 +162,21 @@ const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header & Actions */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-card/50 rounded-xl p-4 border border-border/50">
+      <div className="flex flex-col gap-3 bg-card/50 rounded-xl p-3 sm:p-4 border border-border/50">
         <div>
-          <h3 className="font-semibold text-lg">{dataset.name}</h3>
-          <p className="text-sm text-muted-foreground">
-            {dataset.rawData.length} rows • {dataset.columns.length} columns
+          <h3 className="font-semibold text-base sm:text-lg">{dataset.name}</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            {dataset.rawData.length.toLocaleString()} rows • {dataset.columns.length} columns
           </p>
         </div>
-        <div className="flex gap-2 flex-wrap">
+        <div className="grid grid-cols-2 sm:flex gap-2">
           <Button 
             variant="outline" 
             size="sm"
             onClick={handleExportCsv}
-            className="gap-2"
+            className="gap-2 text-xs sm:text-sm"
           >
             <Download className="w-4 h-4" />
             CSV
@@ -185,32 +185,35 @@ const DataPreview = ({ dataset, onDataCleaned }: DataPreviewProps) => {
             variant="outline" 
             size="sm"
             onClick={handleExportPdf}
-            className="gap-2"
+            className="gap-2 text-xs sm:text-sm"
           >
             <FileDown className="w-4 h-4" />
             PDF
           </Button>
           <Button 
             variant="outline" 
+            size="sm"
             onClick={handleValidate}
             disabled={isValidating || isCleaning}
+            className="text-xs sm:text-sm"
           >
             {isValidating ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
             ) : (
-              <CheckCircle className="w-4 h-4 mr-2" />
+              <CheckCircle className="w-4 h-4 mr-1.5" />
             )}
             Validate
           </Button>
           <Button 
+            size="sm"
             onClick={handleClean}
             disabled={isValidating || isCleaning}
-            className="bg-gradient-to-r from-primary to-cyan-400 hover:opacity-90"
+            className="bg-gradient-to-r from-primary to-accent hover:opacity-90 text-xs sm:text-sm"
           >
             {isCleaning ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
             ) : (
-              <Sparkles className="w-4 h-4 mr-2" />
+              <Sparkles className="w-4 h-4 mr-1.5" />
             )}
             AI Clean
           </Button>

@@ -1,21 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import Navbar from "@/components/Navbar";
 import DataUpload from "@/components/data-agent/DataUpload";
 import DataPreview from "@/components/data-agent/DataPreview";
-import AnalysisPanel from "@/components/data-agent/AnalysisPanel";
-import DataChat from "@/components/data-agent/DataChat";
-import VisualizationDashboard from "@/components/data-agent/VisualizationDashboard";
-import ReportGenerator from "@/components/data-agent/ReportGenerator";
-import NaturalLanguageEngine from "@/components/data-agent/NaturalLanguageEngine";
-import PredictiveAnalytics from "@/components/data-agent/PredictiveAnalytics";
-import AutoDashboard from "@/components/data-agent/AutoDashboard";
-import RealTimeStream from "@/components/data-agent/RealTimeStream";
-import PowerBIDashboard from "@/components/data-agent/PowerBIDashboard";
-import WorkflowBuilder from "@/components/data-agent/WorkflowBuilder";
-import { MLWorkbench } from "@/components/data-agent/ml";
+import { MobileBottomNav, ResponsiveSidebar, ResponsiveContainer } from "@/components/layout";
 import { CollaborationProvider, JoinCollaborationDialog } from "@/components/data-agent/collaboration";
+import { DashboardSkeleton } from "@/components/data-agent/skeletons";
 import { cn } from "@/lib/utils";
 import { 
   Upload, 
@@ -32,9 +24,20 @@ import {
   Layers, 
   Link2, 
   Brain,
-  ChevronRight,
-  Database
 } from "lucide-react";
+
+// Lazy load heavy components
+const AnalysisPanel = lazy(() => import("@/components/data-agent/AnalysisPanel"));
+const DataChat = lazy(() => import("@/components/data-agent/DataChat"));
+const VisualizationDashboard = lazy(() => import("@/components/data-agent/VisualizationDashboard"));
+const ReportGenerator = lazy(() => import("@/components/data-agent/ReportGenerator"));
+const NaturalLanguageEngine = lazy(() => import("@/components/data-agent/NaturalLanguageEngine"));
+const PredictiveAnalytics = lazy(() => import("@/components/data-agent/PredictiveAnalytics"));
+const AutoDashboard = lazy(() => import("@/components/data-agent/AutoDashboard"));
+const RealTimeStream = lazy(() => import("@/components/data-agent/RealTimeStream"));
+const PowerBIDashboard = lazy(() => import("@/components/data-agent/PowerBIDashboard"));
+const WorkflowBuilder = lazy(() => import("@/components/data-agent/WorkflowBuilder"));
+const MLWorkbench = lazy(() => import("@/components/data-agent/ml").then(m => ({ default: m.MLWorkbench })));
 
 export interface DatasetState {
   id?: string;
@@ -48,6 +51,7 @@ export interface DatasetState {
 const DataAgent = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [searchParams] = useSearchParams();
   const [dataset, setDataset] = useState<DatasetState | null>(null);
   const [activeTab, setActiveTab] = useState("upload");
@@ -133,142 +137,80 @@ const DataAgent = () => {
     },
   ];
 
+  const getPageDescription = (tab: string) => {
+    const descriptions: Record<string, string> = {
+      upload: "Upload your data files to get started",
+      connect: "Connect to external data sources",
+      preview: "Preview and clean your dataset",
+      nlp: "Query your data using natural language",
+      powerbi: "Build interactive dashboards",
+      stream: "Monitor real-time data streams",
+      visualize: "Create custom visualizations",
+      dashboard: "Auto-generate insights dashboard",
+      ml: "Train and deploy ML models",
+      predict: "Generate predictive analytics",
+      analyze: "Deep dive into your data",
+      report: "Generate and export reports",
+      chat: "Chat with your data"
+    };
+    return descriptions[tab] || "";
+  };
+
   return (
     <CollaborationProvider>
       <div className="min-h-screen bg-background flex flex-col">
         <Navbar />
         
         <div className="flex-1 flex pt-16">
-          {/* Linear-style Sidebar */}
-          <aside 
-            data-onboarding="sidebar"
-            className={cn(
-              "fixed left-0 top-16 h-[calc(100vh-4rem)] bg-card border-r border-border z-40 transition-all duration-200 flex flex-col",
-              sidebarCollapsed ? "w-16" : "w-56"
-            )}
+          {/* Responsive Sidebar - hidden on mobile */}
+          <ResponsiveSidebar
+            navGroups={navGroups}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            hasData={!!dataset}
+            datasetInfo={dataset ? {
+              name: dataset.name,
+              rowCount: dataset.rawData.length,
+              columnCount: dataset.columns.length
+            } : undefined}
+            collapsed={sidebarCollapsed}
+            onCollapsedChange={setSidebarCollapsed}
           >
-            {/* Sidebar Header */}
-            <div className="p-3 border-b border-border">
-              <button
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-secondary transition-colors"
-              >
-                <Database className="w-4 h-4 text-primary shrink-0" />
-                {!sidebarCollapsed && (
-                  <>
-                    <span className="text-sm font-semibold text-foreground flex-1 text-left">Data Agent</span>
-                    <ChevronRight className={cn(
-                      "w-4 h-4 text-muted-foreground transition-transform",
-                      !sidebarCollapsed && "rotate-180"
-                    )} />
-                  </>
-                )}
-              </button>
-            </div>
-
-            {/* Dataset Badge */}
-            {dataset && !sidebarCollapsed && (
-              <div className="px-3 py-2 border-b border-border">
-                <div className="flex items-center gap-2 px-2 py-1.5 bg-secondary/50 rounded-md">
-                  <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-foreground truncate">{dataset.name}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {dataset.rawData.length.toLocaleString()} rows • {dataset.columns.length} cols
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Navigation Groups */}
-            <nav className="flex-1 overflow-y-auto scrollbar-thin py-2">
-              {navGroups.map((group) => (
-                <div key={group.label} className="mb-1">
-                  {!sidebarCollapsed && (
-                    <div className="px-4 py-2">
-                      <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
-                        {group.label}
-                      </span>
-                    </div>
-                  )}
-                  {group.items.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = activeTab === item.value;
-                    const isDisabled = item.requiresData && !dataset;
-                    
-                    return (
-                      <button
-                        key={item.value}
-                        onClick={() => !isDisabled && setActiveTab(item.value)}
-                        disabled={isDisabled}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-4 py-2 text-sm transition-all duration-150",
-                          sidebarCollapsed && "justify-center px-2",
-                          isActive 
-                            ? "bg-primary/10 text-primary border-r-2 border-primary" 
-                            : "text-muted-foreground hover:text-foreground hover:bg-secondary/50",
-                          isDisabled && "opacity-40 cursor-not-allowed"
-                        )}
-                        title={sidebarCollapsed ? item.label : undefined}
-                      >
-                        <Icon className={cn("w-4 h-4 shrink-0", isActive && "text-primary")} />
-                        {!sidebarCollapsed && (
-                          <span className={cn("font-medium", isActive && "text-primary")}>
-                            {item.label}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              ))}
-            </nav>
-
-            {/* Collaboration */}
-            <div className="p-3 border-t border-border">
-              <JoinCollaborationDialog datasetName={dataset?.name} />
-            </div>
-          </aside>
+            <JoinCollaborationDialog datasetName={dataset?.name} />
+          </ResponsiveSidebar>
 
           {/* Main Content */}
           <main 
             className={cn(
               "flex-1 transition-all duration-200",
-              sidebarCollapsed ? "ml-16" : "ml-56"
+              // Mobile: full width with bottom padding for nav
+              "pb-20 md:pb-0",
+              // Desktop: margin for sidebar
+              "md:ml-56",
+              sidebarCollapsed && "lg:ml-16"
             )}
           >
-            <div className="max-w-6xl mx-auto p-6">
+            <ResponsiveContainer maxWidth="xl" className="py-4 sm:py-6">
               {/* Page Header */}
-              <div className="mb-6">
-                <h1 className="text-xl font-semibold text-foreground tracking-tight">
+              <div className="mb-4 sm:mb-6">
+                <h1 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight">
                   {navGroups.flatMap(g => g.items).find(t => t.value === activeTab)?.label || "Data Agent"}
                 </h1>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {activeTab === "upload" && "Upload your data files to get started"}
-                  {activeTab === "connect" && "Connect to external data sources"}
-                  {activeTab === "preview" && "Preview and clean your dataset"}
-                  {activeTab === "nlp" && "Query your data using natural language"}
-                  {activeTab === "powerbi" && "Build interactive dashboards"}
-                  {activeTab === "stream" && "Monitor real-time data streams"}
-                  {activeTab === "visualize" && "Create custom visualizations"}
-                  {activeTab === "dashboard" && "Auto-generate insights dashboard"}
-                  {activeTab === "ml" && "Train and deploy ML models"}
-                  {activeTab === "predict" && "Generate predictive analytics"}
-                  {activeTab === "analyze" && "Deep dive into your data"}
-                  {activeTab === "report" && "Generate and export reports"}
-                  {activeTab === "chat" && "Chat with your data"}
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  {getPageDescription(activeTab)}
                 </p>
               </div>
 
-              {/* Content Panels */}
+              {/* Content Panels with Suspense for lazy loading */}
               <div className="animate-fade-in">
                 <div className={activeTab === "upload" ? "block" : "hidden"}>
                   <DataUpload onDataLoaded={handleDataLoaded} />
                 </div>
 
                 <div className={activeTab === "connect" ? "block" : "hidden"}>
-                  <WorkflowBuilder onDataLoaded={handleDataLoaded} />
+                  <Suspense fallback={<DashboardSkeleton />}>
+                    <WorkflowBuilder onDataLoaded={handleDataLoaded} />
+                  </Suspense>
                 </div>
 
                 <div className={activeTab === "preview" ? "block" : "hidden"}>
@@ -282,89 +224,124 @@ const DataAgent = () => {
 
                 <div className={activeTab === "nlp" ? "block" : "hidden"}>
                   {dataset && (
-                    <NaturalLanguageEngine
-                      data={dataset.cleanedData || dataset.rawData}
-                      columns={dataset.columns}
-                      columnTypes={getColumnTypes()}
-                      datasetName={dataset.name}
-                    />
+                    <Suspense fallback={<DashboardSkeleton />}>
+                      <NaturalLanguageEngine
+                        data={dataset.cleanedData || dataset.rawData}
+                        columns={dataset.columns}
+                        columnTypes={getColumnTypes()}
+                        datasetName={dataset.name}
+                      />
+                    </Suspense>
                   )}
                 </div>
 
                 <div className={activeTab === "powerbi" ? "block" : "hidden"}>
                   {dataset && (
-                    <PowerBIDashboard
-                      data={dataset.cleanedData || dataset.rawData}
-                      columns={dataset.columns}
-                      columnTypes={getColumnTypes()}
-                      datasetName={dataset.name}
-                    />
+                    <Suspense fallback={<DashboardSkeleton />}>
+                      <PowerBIDashboard
+                        data={dataset.cleanedData || dataset.rawData}
+                        columns={dataset.columns}
+                        columnTypes={getColumnTypes()}
+                        datasetName={dataset.name}
+                      />
+                    </Suspense>
                   )}
                 </div>
 
                 <div className={activeTab === "stream" ? "block" : "hidden"}>
                   {dataset && (
-                    <RealTimeStream
-                      data={dataset.cleanedData || dataset.rawData}
-                      columns={dataset.columns}
-                      columnTypes={getColumnTypes()}
-                      datasetName={dataset.name}
-                    />
+                    <Suspense fallback={<DashboardSkeleton />}>
+                      <RealTimeStream
+                        data={dataset.cleanedData || dataset.rawData}
+                        columns={dataset.columns}
+                        columnTypes={getColumnTypes()}
+                        datasetName={dataset.name}
+                      />
+                    </Suspense>
                   )}
                 </div>
 
                 <div className={activeTab === "visualize" ? "block" : "hidden"}>
-                  {dataset && <VisualizationDashboard dataset={dataset} />}
+                  {dataset && (
+                    <Suspense fallback={<DashboardSkeleton />}>
+                      <VisualizationDashboard dataset={dataset} />
+                    </Suspense>
+                  )}
                 </div>
 
                 <div className={activeTab === "dashboard" ? "block" : "hidden"}>
                   {dataset && (
-                    <AutoDashboard
-                      data={dataset.cleanedData || dataset.rawData}
-                      columns={dataset.columns}
-                      columnTypes={getColumnTypes()}
-                      datasetName={dataset.name}
-                    />
+                    <Suspense fallback={<DashboardSkeleton />}>
+                      <AutoDashboard
+                        data={dataset.cleanedData || dataset.rawData}
+                        columns={dataset.columns}
+                        columnTypes={getColumnTypes()}
+                        datasetName={dataset.name}
+                      />
+                    </Suspense>
                   )}
                 </div>
 
                 <div className={activeTab === "ml" ? "block" : "hidden"}>
                   {dataset && (
-                    <MLWorkbench
-                      data={dataset.cleanedData || dataset.rawData}
-                      columns={dataset.columns}
-                      columnTypes={getColumnTypes()}
-                      datasetName={dataset.name}
-                    />
+                    <Suspense fallback={<DashboardSkeleton />}>
+                      <MLWorkbench
+                        data={dataset.cleanedData || dataset.rawData}
+                        columns={dataset.columns}
+                        columnTypes={getColumnTypes()}
+                        datasetName={dataset.name}
+                      />
+                    </Suspense>
                   )}
                 </div>
 
                 <div className={activeTab === "predict" ? "block" : "hidden"}>
                   {dataset && (
-                    <PredictiveAnalytics
-                      data={dataset.cleanedData || dataset.rawData}
-                      columns={dataset.columns}
-                      columnTypes={getColumnTypes()}
-                      datasetName={dataset.name}
-                    />
+                    <Suspense fallback={<DashboardSkeleton />}>
+                      <PredictiveAnalytics
+                        data={dataset.cleanedData || dataset.rawData}
+                        columns={dataset.columns}
+                        columnTypes={getColumnTypes()}
+                        datasetName={dataset.name}
+                      />
+                    </Suspense>
                   )}
                 </div>
 
                 <div className={activeTab === "analyze" ? "block" : "hidden"}>
-                  {dataset && <AnalysisPanel dataset={dataset} />}
+                  {dataset && (
+                    <Suspense fallback={<DashboardSkeleton />}>
+                      <AnalysisPanel dataset={dataset} />
+                    </Suspense>
+                  )}
                 </div>
 
                 <div className={activeTab === "report" ? "block" : "hidden"}>
-                  {dataset && <ReportGenerator dataset={dataset} />}
+                  {dataset && (
+                    <Suspense fallback={<DashboardSkeleton />}>
+                      <ReportGenerator dataset={dataset} />
+                    </Suspense>
+                  )}
                 </div>
 
                 <div className={activeTab === "chat" ? "block" : "hidden"}>
-                  {dataset && <DataChat dataset={dataset} />}
+                  {dataset && (
+                    <Suspense fallback={<DashboardSkeleton />}>
+                      <DataChat dataset={dataset} />
+                    </Suspense>
+                  )}
                 </div>
               </div>
-            </div>
+            </ResponsiveContainer>
           </main>
         </div>
+
+        {/* Mobile Bottom Navigation */}
+        <MobileBottomNav
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          hasData={!!dataset}
+        />
       </div>
     </CollaborationProvider>
   );
