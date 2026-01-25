@@ -192,7 +192,7 @@ const WorkflowBuilder = ({ onDataLoaded }: WorkflowBuilderProps) => {
     if (!connector) return;
 
     try {
-      const supportedTypes = ['google_sheets', 'csv_url', 'json_api', 'airtable', 'notion'];
+      const supportedTypes = ['google_sheets', 'csv_url', 'json_api', 'airtable', 'notion', 'webhook', 's3'];
       
       if (supportedTypes.includes(connector.type)) {
         const { data: response, error } = await supabase.functions.invoke('fetch-connector-data', {
@@ -595,12 +595,29 @@ const WorkflowBuilder = ({ onDataLoaded }: WorkflowBuilderProps) => {
             <Label>Connection Name</Label>
             <Input placeholder="My Webhook" value={formConfig.name || ""} onChange={(e) => setFormConfig(prev => ({ ...prev, name: e.target.value }))} />
           </div>
+          <div className="space-y-2">
+            <Label>Webhook ID</Label>
+            <Input placeholder="unique-webhook-id" value={formConfig.webhookId || ""} onChange={(e) => setFormConfig(prev => ({ ...prev, webhookId: e.target.value.toLowerCase().replace(/\s+/g, '-') }))} />
+            <p className="text-xs text-muted-foreground">Use a unique identifier for your webhook</p>
+          </div>
           <div className="p-4 rounded-lg bg-muted/50 border border-border">
             <p className="text-sm font-medium mb-2">Your Webhook URL</p>
-            <code className="text-xs bg-background px-2 py-1 rounded">
-              https://api.dataagent.io/webhook/{formConfig.name?.toLowerCase().replace(/\s+/g, '-') || 'my-webhook'}
-            </code>
-            <p className="text-xs text-muted-foreground mt-2">Send POST requests to this URL to push data</p>
+            <div className="flex items-center gap-2">
+              <code className="text-xs bg-background px-2 py-1 rounded break-all flex-1">
+                {`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-receiver/${formConfig.webhookId || 'your-webhook-id'}`}
+              </code>
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={() => {
+                  navigator.clipboard.writeText(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/webhook-receiver/${formConfig.webhookId || 'your-webhook-id'}`);
+                  toast({ title: "Copied!", description: "Webhook URL copied to clipboard" });
+                }}
+              >
+                Copy
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">Send POST requests with JSON data to this URL</p>
           </div>
         </div>
       ),

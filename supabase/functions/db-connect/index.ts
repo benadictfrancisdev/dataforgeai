@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Client as PostgresClient } from "https://deno.land/x/postgres@v0.17.0/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,6 +24,17 @@ interface ConnectionRequest {
   sql?: string;
   naturalLanguageQuery?: string;
   tableContext?: string[];
+}
+
+interface DatabaseConnection {
+  id: string;
+  host: string;
+  port: number;
+  database_name: string;
+  username: string;
+  encrypted_password: string;
+  ssl_enabled: boolean;
+  db_type: string;
 }
 
 // Simple encryption using base64 + XOR (for demo - in production use proper encryption)
@@ -73,6 +85,63 @@ function validateSqlQuery(sql: string): { valid: boolean; reason?: string } {
   }
   
   return { valid: true };
+}
+
+// Execute PostgreSQL query
+async function executePostgresQuery(
+  connection: DatabaseConnection,
+  sql: string,
+  encryptionKey: string
+): Promise<{ results: Record<string, unknown>[]; rowCount: number }> {
+  const password = decryptPassword(connection.encrypted_password, encryptionKey);
+  
+  const client = new PostgresClient({
+    hostname: connection.host,
+    port: connection.port,
+    database: connection.database_name,
+    user: connection.username,
+    password: password,
+    tls: connection.ssl_enabled ? { enabled: true, enforce: false } : { enabled: false },
+  });
+  
+  try {
+    await client.connect();
+    console.log('[DB-Connect] PostgreSQL connected successfully');
+    
+    const result = await client.queryObject<Record<string, unknown>>(sql);
+    
+    return {
+      results: result.rows,
+      rowCount: result.rowCount || 0
+    };
+  } finally {
+    await client.end();
+  }
+}
+
+// Execute query based on database type
+async function executeQuery(
+  connection: DatabaseConnection,
+  sql: string,
+  encryptionKey: string
+): Promise<{ results: Record<string, unknown>[]; rowCount: number }> {
+  switch (connection.db_type) {
+    case 'postgresql':
+      return await executePostgresQuery(connection, sql, encryptionKey);
+    case 'mysql':
+      // MySQL support would require npm:mysql2/promise which has compatibility issues in Deno
+      // Return demo data with clear messaging
+      console.log('[DB-Connect] MySQL query execution - returning demo data');
+      return {
+        results: [
+          { info: 'MySQL real query execution requires additional driver setup' },
+          { suggestion: 'Use PostgreSQL for full query support' }
+        ],
+        rowCount: 2
+      };
+    default:
+      throw new Error(`Query execution not supported for ${connection.db_type}`);
+  }
 }
 
 // Generate SQL from natural language using AI
@@ -139,16 +208,13 @@ Respond ONLY with valid JSON:
   return { sql: '', explanation: 'Failed to generate SQL' };
 }
 
-// Test database connection (mock for edge function - actual connection would require external service)
+// Test database connection with actual connection attempt
 async function testConnection(connection: ConnectionRequest['connection']): Promise<{ success: boolean; message: string; tables?: string[] }> {
-  // In a real implementation, this would use a database driver or proxy service
-  // For now, we validate the connection parameters
-  
   if (!connection) {
     return { success: false, message: 'Connection details required' };
   }
   
-  const { host, port, database_name, username, db_type } = connection;
+  const { host, port, database_name, username, password, db_type, ssl_enabled } = connection;
   
   // Validate required fields
   if (!host || !port || !database_name || !username) {
@@ -165,18 +231,55 @@ async function testConnection(connection: ConnectionRequest['connection']): Prom
     return { success: false, message: 'Invalid host format' };
   }
   
-  // For supported database types, return success (actual connection would be tested via proxy)
+  // For PostgreSQL, attempt real connection
+  if (db_type === 'postgresql') {
+    const client = new PostgresClient({
+      hostname: host,
+      port: port,
+      database: database_name,
+      user: username,
+      password: password,
+      tls: ssl_enabled ? { enabled: true, enforce: false } : { enabled: false },
+    });
+    
+    try {
+      await client.connect();
+      
+      // Get list of tables
+      const result = await client.queryObject<{ table_name: string }>(
+        `SELECT table_name FROM information_schema.tables 
+         WHERE table_schema = 'public' 
+         ORDER BY table_name`
+      );
+      
+      await client.end();
+      
+      const tables = result.rows.map(r => r.table_name);
+      
+      return { 
+        success: true, 
+        message: `Connected to PostgreSQL. Found ${tables.length} tables.`,
+        tables
+      };
+    } catch (error) {
+      console.error('[DB-Connect] PostgreSQL connection error:', error);
+      return { 
+        success: false, 
+        message: `Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  }
+  
+  // For other databases, validate parameters only
   const supportedTypes = ['postgresql', 'mysql', 'sqlite', 'mongodb'];
   if (!supportedTypes.includes(db_type)) {
     return { success: false, message: `Unsupported database type: ${db_type}` };
   }
   
-  // Simulate successful connection test
-  // In production, this would actually attempt a connection via a secure proxy service
   return { 
     success: true, 
     message: `Connection parameters validated for ${db_type}. Ready to save.`,
-    tables: [] // Would return actual tables after connection
+    tables: []
   };
 }
 
@@ -300,27 +403,122 @@ serve(async (req) => {
       }
 
       case 'list-tables': {
-        // Would connect to actual database and list tables
-        // For now, return mock data demonstrating the interface
+        if (!body.connectionId) {
+          return new Response(
+            JSON.stringify({ error: 'Connection ID required' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Get connection details
+        const { data: connection, error: connError } = await supabase
+          .from('database_connections')
+          .select('*')
+          .eq('id', body.connectionId)
+          .eq('user_id', userId)
+          .single();
+
+        if (connError || !connection) {
+          return new Response(
+            JSON.stringify({ error: 'Connection not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Execute table listing query for PostgreSQL
+        if (connection.db_type === 'postgresql') {
+          try {
+            const sql = `SELECT table_name FROM information_schema.tables 
+                         WHERE table_schema = 'public' ORDER BY table_name`;
+            const result = await executePostgresQuery(connection as DatabaseConnection, sql, encryptionKey);
+            const tables = result.results.map(row => row.table_name as string);
+            
+            return new Response(
+              JSON.stringify({ success: true, tables }),
+              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          } catch (error) {
+            console.error('[DB-Connect] List tables error:', error);
+            return new Response(
+              JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to list tables' }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+
+        // Fallback for other database types
         return new Response(
           JSON.stringify({ 
             success: true, 
             tables: ['customers', 'orders', 'products', 'categories'],
-            message: 'Tables retrieved (demo mode)'
+            message: 'Demo tables (real table listing requires PostgreSQL)'
           }),
           { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
       case 'get-schema': {
-        if (!body.tableName) {
+        if (!body.tableName || !body.connectionId) {
           return new Response(
-            JSON.stringify({ error: 'Table name required' }),
+            JSON.stringify({ error: 'Table name and connection ID required' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
 
-        // Mock schema response
+        // Get connection details
+        const { data: connection, error: connError } = await supabase
+          .from('database_connections')
+          .select('*')
+          .eq('id', body.connectionId)
+          .eq('user_id', userId)
+          .single();
+
+        if (connError || !connection) {
+          return new Response(
+            JSON.stringify({ error: 'Connection not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Execute schema query for PostgreSQL
+        if (connection.db_type === 'postgresql') {
+          try {
+            // Sanitize table name to prevent SQL injection
+            const safeTableName = body.tableName.replace(/[^a-zA-Z0-9_]/g, '');
+            
+            const sql = `SELECT column_name, data_type, is_nullable, column_default
+                         FROM information_schema.columns 
+                         WHERE table_name = '${safeTableName}' 
+                         AND table_schema = 'public'
+                         ORDER BY ordinal_position`;
+            
+            const result = await executePostgresQuery(connection as DatabaseConnection, sql, encryptionKey);
+            
+            return new Response(
+              JSON.stringify({ 
+                success: true,
+                schema: {
+                  tableName: body.tableName,
+                  columns: result.results.map(col => ({
+                    name: col.column_name,
+                    type: col.data_type,
+                    nullable: col.is_nullable === 'YES',
+                    default: col.column_default
+                  }))
+                }
+              }),
+              { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          } catch (error) {
+            console.error('[DB-Connect] Get schema error:', error);
+            return new Response(
+              JSON.stringify({ error: error instanceof Error ? error.message : 'Failed to get schema' }),
+              { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+
+        // Mock schema response for other databases
         return new Response(
           JSON.stringify({ 
             success: true,
@@ -396,9 +594,9 @@ serve(async (req) => {
       }
 
       case 'query': {
-        if (!body.sql) {
+        if (!body.sql || !body.connectionId) {
           return new Response(
-            JSON.stringify({ error: 'SQL query required' }),
+            JSON.stringify({ error: 'SQL query and connection ID required' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
@@ -412,18 +610,57 @@ serve(async (req) => {
           );
         }
 
-        // In production, execute against actual database
-        // For now, return demo response
-        return new Response(
-          JSON.stringify({ 
-            success: true,
-            message: 'Query validated. Execution would happen via secure proxy.',
-            sql: body.sql,
-            results: [],
-            rowCount: 0
-          }),
-          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
+        // Get connection details
+        const { data: connection, error: connError } = await supabase
+          .from('database_connections')
+          .select('*')
+          .eq('id', body.connectionId)
+          .eq('user_id', userId)
+          .single();
+
+        if (connError || !connection) {
+          return new Response(
+            JSON.stringify({ error: 'Connection not found' }),
+            { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Add LIMIT if not present
+        let sql = body.sql;
+        if (!sql.toUpperCase().includes('LIMIT')) {
+          sql = sql.replace(/;?\s*$/, ' LIMIT 1000;');
+        }
+
+        try {
+          // Execute query
+          const result = await executeQuery(connection as DatabaseConnection, sql, encryptionKey);
+
+          // Update last_connected_at
+          await supabase
+            .from('database_connections')
+            .update({ last_connected_at: new Date().toISOString() })
+            .eq('id', body.connectionId);
+
+          return new Response(
+            JSON.stringify({ 
+              success: true,
+              sql: body.sql,
+              results: result.results,
+              rowCount: result.rowCount,
+              columns: result.results.length > 0 ? Object.keys(result.results[0]) : []
+            }),
+            { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        } catch (error) {
+          console.error('[DB-Connect] Query error:', error);
+          return new Response(
+            JSON.stringify({ 
+              error: error instanceof Error ? error.message : 'Query execution failed',
+              sql: body.sql
+            }),
+            { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
       }
 
       default:

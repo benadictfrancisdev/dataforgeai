@@ -613,6 +613,39 @@ export type Database = {
           },
         ]
       }
+      webhook_data: {
+        Row: {
+          headers: Json | null
+          id: string
+          payload: Json
+          processed: boolean | null
+          received_at: string | null
+          source_ip: string | null
+          user_id: string
+          webhook_id: string
+        }
+        Insert: {
+          headers?: Json | null
+          id?: string
+          payload: Json
+          processed?: boolean | null
+          received_at?: string | null
+          source_ip?: string | null
+          user_id: string
+          webhook_id: string
+        }
+        Update: {
+          headers?: Json | null
+          id?: string
+          payload?: Json
+          processed?: boolean | null
+          received_at?: string | null
+          source_ip?: string | null
+          user_id?: string
+          webhook_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
