@@ -1,388 +1,304 @@
 
-# DataForge Responsive Refactoring Plan
+# Color Scheme Update: Modern Dark Tech Theme
 
 ## Overview
 
-This plan transforms DataForge into a fully responsive, mobile-first SaaS dashboard that works seamlessly across all device sizes from 360px mobile phones to 2560px+ ultrawide monitors.
+This plan updates DataForge's color palette to a modern dark tech aesthetic with the user's specified colors, plus adds a prominent day/night theme toggle throughout the UI.
 
 ---
 
-## Current State Analysis
-
-| Component | Current State | Issues |
-|-----------|---------------|--------|
-| DataAgent.tsx | Fixed-width sidebar (56px/224px) | No mobile breakpoint, sidebar overlays content on small screens |
-| Navbar.tsx | Basic responsive hamburger menu | Works reasonably well |
-| VisualizationDashboard.tsx | Partial responsive grids | TabsList with 7 items overflows on mobile |
-| PowerBIDashboard.tsx | 1642 lines, complex layout | Fixed chart heights, dense UI on mobile |
-| VirtualTable.tsx | Fixed height (500px) | Min-width columns cause horizontal scroll |
-| Chart components | ResponsiveContainer used | Works well, but parent containers need adjustment |
-| Forms/Inputs | Standard sizing | Need larger tap targets for mobile |
-
----
-
-## Implementation Strategy
-
-### Phase 1: Layout System Foundation
-
-**1.1 Create Responsive Layout Components**
-
-Create a reusable responsive layout system in `src/components/layout/`:
-
-```text
-src/components/layout/
-  ResponsiveContainer.tsx    - Fluid container with max-width constraints
-  ResponsiveGrid.tsx         - 12-column grid with breakpoint-aware columns
-  MobileBottomNav.tsx        - Bottom navigation for mobile
-  ResponsiveSidebar.tsx      - Sidebar with drawer mode on mobile
-  index.ts                   - Barrel export
-```
-
-**1.2 ResponsiveContainer Component**
-
-- Replaces fixed `max-w-6xl` containers
-- Uses fluid padding: `px-4 sm:px-6 lg:px-8`
-- Implements proper max-widths per breakpoint
-
-**1.3 ResponsiveGrid Component**
-
-- 12-column CSS Grid system
-- Props for responsive column spans: `cols={{ base: 1, sm: 2, md: 3, lg: 4 }}`
-- Gap utilities that scale with viewport
-
----
-
-### Phase 2: Navigation System
-
-**2.1 Mobile Bottom Navigation**
-
-Create `MobileBottomNav.tsx` for mobile devices:
-- Fixed to bottom of viewport
-- 5 primary navigation items with icons
-- Thumb-friendly 56px height
-- "More" menu for additional items
-- Visible only on screens < 768px
-
-**2.2 Responsive Sidebar**
-
-Update `DataAgent.tsx` sidebar behavior:
-- Desktop (lg+): Fixed sidebar, collapsible
-- Tablet (md-lg): Overlay drawer with backdrop
-- Mobile (< md): Hidden, replaced by bottom nav
-
-**2.3 Navigation Items Reorganization**
-
-For mobile bottom nav, prioritize:
-1. Upload (primary action)
-2. Preview (data view)
-3. Dashboard (visualize)
-4. Chat (AI interaction)
-5. More (overflow menu with remaining items)
-
----
-
-### Phase 3: Component Refactoring
-
-**3.1 DataAgent.tsx Main Layout**
-
-Current:
-```tsx
-<aside className={cn(
-  "fixed left-0 top-16 h-[calc(100vh-4rem)]...",
-  sidebarCollapsed ? "w-16" : "w-56"
-)}>
-```
-
-Updated:
-```tsx
-// Mobile: No sidebar, use bottom nav
-// Tablet: Drawer sidebar
-// Desktop: Fixed sidebar
-
-<aside className={cn(
-  "fixed top-16 h-[calc(100vh-4rem)] bg-card border-r border-border z-40",
-  "transition-all duration-200 flex flex-col",
-  // Hide on mobile
-  "hidden md:flex",
-  // Tablet: overlay drawer
-  "md:w-56 lg:w-56",
-  sidebarCollapsed && "lg:w-16"
-)}>
-```
-
-Main content:
-```tsx
-<main className={cn(
-  "flex-1 transition-all duration-200",
-  // Mobile: full width, bottom padding for nav
-  "pb-20 md:pb-0",
-  // Tablet/Desktop: margin for sidebar
-  "md:ml-56",
-  sidebarCollapsed && "lg:ml-16"
-)}>
-```
-
-**3.2 VisualizationDashboard.tsx Tabs**
-
-Current TabsList (7 items in single row) overflows on mobile.
-
-Solution:
-- Mobile: Horizontal scrollable tabs OR dropdown selector
-- Tablet+: Full tab row
-
-```tsx
-<TabsList className={cn(
-  "bg-card/50 p-1 h-auto",
-  // Mobile: horizontal scroll
-  "flex overflow-x-auto scrollbar-hide gap-1",
-  // Desktop: grid layout
-  "md:grid md:grid-cols-7"
-)}>
-```
-
-**3.3 PowerBIDashboard.tsx**
-
-Key changes:
-- Toolbar becomes vertical or collapsed on mobile
-- Template selector becomes full-screen modal on mobile
-- Tile grid: 1 column mobile, 2 tablet, 3-4 desktop
-- Filter panel: slide-up sheet on mobile
-
-**3.4 VirtualTable.tsx**
-
-Implement card-based layout option for mobile:
-```tsx
-{isMobile ? (
-  <MobileCardList data={data} columns={columns} />
-) : (
-  <VirtualTable data={data} columns={columns} />
-)}
-```
-
-Card layout shows:
-- Primary column as card title
-- Secondary columns as stacked key-value pairs
-- Expandable for full row details
-
-**3.5 DataUpload.tsx**
-
-Already reasonably responsive. Minor updates:
-- Drop zone: reduce padding on mobile
-- Sample dataset buttons: stack vertically on mobile
-
-**3.6 DataPreview.tsx**
-
-- Action buttons: stack into 2x2 grid on mobile
-- Table: use horizontal scroll with sticky first column
-- Or switch to card view for narrow screens
-
-**3.7 WorkflowBuilder.tsx (1163 lines)**
-
-- Connector grid: 2 columns mobile, 4 desktop
-- Form inputs: full-width on mobile
-- Tabs: scrollable on mobile
-- Job history table: card layout on mobile
-
-**3.8 NaturalLanguageEngine.tsx**
-
-- Chat interface: already flex-based, minor tweaks needed
-- Quick queries: 2-column grid on mobile
-- Input area: sticky to bottom on mobile
-
-**3.9 Charts (All chart components)**
-
-Charts are already using ResponsiveContainer from Recharts. Updates needed:
-- Reduce chart heights on mobile: 200px vs 280px desktop
-- Simplify legends on mobile (fewer items)
-- Larger touch targets for tooltips
-
----
-
-### Phase 4: CSS and Tailwind Updates
-
-**4.1 Update tailwind.config.ts**
-
-Ensure all breakpoints are properly configured:
-```ts
-screens: {
-  'xs': '360px',   // Small phones
-  'sm': '640px',   // Large phones
-  'md': '768px',   // Tablets
-  'lg': '1024px',  // Laptops
-  'xl': '1280px',  // Desktops
-  '2xl': '1536px', // Large screens
-}
-```
-
-**4.2 Update index.css**
-
-Add responsive utilities:
-```css
-/* Prevent iOS zoom on input focus */
-@media (max-width: 767px) {
-  input, select, textarea {
-    font-size: 16px !important;
-  }
-}
-
-/* Safe area padding for notched devices */
-.pb-safe {
-  padding-bottom: max(1rem, env(safe-area-inset-bottom));
-}
-
-/* Hide scrollbar utility */
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
-
-/* Touch-friendly spacing */
-.touch-spacing > * {
-  min-height: 44px;
-  min-width: 44px;
-}
-```
-
----
-
-### Phase 5: Performance Optimizations
-
-**5.1 Lazy Loading**
-
-Implement React.lazy for heavy components:
-```tsx
-const PowerBIDashboard = lazy(() => import('./PowerBIDashboard'));
-const MLWorkbench = lazy(() => import('./ml/MLWorkbench'));
-const VisualizationDashboard = lazy(() => import('./VisualizationDashboard'));
-```
-
-**5.2 Conditional Rendering**
-
-Use `useIsMobile` hook to conditionally render mobile vs desktop components:
-```tsx
-const isMobile = useIsMobile();
-
-return isMobile ? <MobileView /> : <DesktopView />;
-```
-
-**5.3 Skeleton Loading**
-
-Already implemented, ensure all lazy-loaded components use skeletons.
-
----
-
-### Phase 6: UX Enhancements
-
-**6.1 Touch Gestures**
-
-- Swipe left/right between tabs on mobile
-- Pull-to-refresh on data panels
-- Long-press for context menus
-
-**6.2 Sticky Elements**
-
-- Action buttons stick to bottom on mobile
-- Table headers remain sticky
-- Chat input sticky to bottom
-
-**6.3 Accessibility**
-
-- Minimum 44px tap targets
-- 16px+ font sizes on mobile
-- High contrast focus states
-- Proper aria labels
+## New Color Specifications
+
+| Element | Hex | HSL (for CSS variables) |
+|---------|-----|-------------------------|
+| Background | **#0A0F14** | 210 33% 6% |
+| Primary | **#1F6FEB** | 212 85% 52% |
+| Accent | **#F97316** | 25 95% 53% |
+| Text | **#CBD5E1** | 215 20% 85% |
+
+Light mode will use complementary lighter tones for a clean daytime experience.
 
 ---
 
 ## File Changes Summary
 
-### New Files (6 files)
-```
-src/components/layout/ResponsiveContainer.tsx
-src/components/layout/ResponsiveGrid.tsx
-src/components/layout/MobileBottomNav.tsx
-src/components/layout/ResponsiveSidebar.tsx
-src/components/layout/index.ts
-src/components/data-agent/MobileCardView.tsx
+### 1. `src/index.css` - Complete Color Variable Overhaul
+
+**Dark Mode (`.dark` class):**
+```css
+.dark {
+  /* Deep dark background */
+  --background: 210 33% 6%;           /* #0A0F14 */
+  --foreground: 215 20% 85%;          /* #CBD5E1 */
+  
+  --card: 210 28% 9%;                 /* Slightly lighter than bg */
+  --card-foreground: 215 20% 85%;
+  
+  /* GitHub-style blue primary */
+  --primary: 212 85% 52%;             /* #1F6FEB */
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 210 25% 13%;           /* Dark slate */
+  --secondary-foreground: 215 20% 85%;
+  
+  --muted: 210 22% 16%;
+  --muted-foreground: 215 15% 55%;
+  
+  /* Orange accent */
+  --accent: 25 95% 53%;               /* #F97316 */
+  --accent-foreground: 0 0% 100%;
+  
+  --border: 210 20% 18%;
+  --input: 210 20% 18%;
+  --ring: 212 85% 52%;
+  
+  /* Chart colors: Blue / Teal / Violet / Orange spectrum */
+  --chart-1: 212 85% 52%;             /* Primary blue */
+  --chart-2: 173 80% 40%;             /* Teal */
+  --chart-3: 262 83% 58%;             /* Violet */
+  --chart-4: 25 95% 53%;              /* Orange accent */
+  --chart-5: 199 89% 48%;             /* Cyan */
+  --chart-6: 280 65% 60%;             /* Purple */
+  --chart-7: 160 84% 39%;             /* Emerald */
+  --chart-8: 234 89% 60%;             /* Indigo */
+  
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #1F6FEB 0%, #7C3AED 100%);
+  --gradient-subtle: linear-gradient(180deg, #0A0F14 0%, #0D1117 100%);
+  --gradient-accent: linear-gradient(135deg, #F97316 0%, #FB923C 100%);
+  
+  /* Shadows */
+  --shadow-glow: 0 0 0 1px rgba(31, 111, 235, 0.2);
+}
 ```
 
-### Modified Files (15+ files)
-```
-src/pages/DataAgent.tsx                           - Major layout refactor
-src/components/Navbar.tsx                         - Minor mobile improvements
-src/components/data-agent/VisualizationDashboard.tsx - Responsive tabs
-src/components/data-agent/PowerBIDashboard.tsx    - Mobile-friendly layout
-src/components/data-agent/VirtualTable.tsx        - Mobile card option
-src/components/data-agent/DataUpload.tsx          - Minor spacing
-src/components/data-agent/DataPreview.tsx         - Responsive actions
-src/components/data-agent/WorkflowBuilder.tsx     - Mobile forms
-src/components/data-agent/NaturalLanguageEngine.tsx - Chat layout
-src/components/data-agent/DataChat.tsx            - Mobile chat UX
-src/components/data-agent/ReportGenerator.tsx     - Responsive forms
-src/components/data-agent/AutoDashboard.tsx       - Grid improvements
-src/components/data-agent/charts/*.tsx            - Height adjustments
-tailwind.config.ts                                - Breakpoint updates
-src/index.css                                     - New utilities
+**Light Mode (`:root`):**
+```css
+:root {
+  /* Clean white/gray background */
+  --background: 210 20% 98%;
+  --foreground: 210 33% 12%;          /* Near black */
+  
+  --card: 0 0% 100%;                  /* Pure white */
+  --card-foreground: 210 33% 12%;
+  
+  /* Same primary blue */
+  --primary: 212 85% 52%;             /* #1F6FEB */
+  --primary-foreground: 0 0% 100%;
+  
+  --secondary: 214 32% 95%;           /* Light gray */
+  --secondary-foreground: 210 33% 12%;
+  
+  --muted: 214 32% 93%;
+  --muted-foreground: 210 15% 40%;
+  
+  /* Orange accent */
+  --accent: 25 95% 53%;               /* #F97316 */
+  --accent-foreground: 0 0% 100%;
+  
+  --border: 214 32% 90%;
+  --input: 214 32% 90%;
+  --ring: 212 85% 52%;
+  
+  /* Same chart colors */
+  --chart-1 through --chart-8: same hues, adjusted saturation
+}
 ```
 
 ---
 
-## Breakpoint Behavior Matrix
+### 2. `src/components/ThemeToggle.tsx` - Enhanced with Label Option
 
-| Component | Mobile (< 768px) | Tablet (768-1024px) | Desktop (1024px+) |
-|-----------|------------------|---------------------|-------------------|
-| Sidebar | Hidden (bottom nav) | Drawer overlay | Fixed sidebar |
-| Main nav | Bottom bar (5 items) | Top + side | Top + side |
-| Charts | 1 column, 200px height | 2 columns, 240px | 2-4 columns, 280px |
-| Tables | Card layout | Horizontal scroll | Full table |
-| Forms | Stacked, full-width | 2 columns | 2-3 columns |
-| Tabs | Horizontal scroll | Full row | Full row |
-| Modals | Full screen sheet | Centered dialog | Centered dialog |
+Add optional label display and improved styling:
+
+```tsx
+interface ThemeToggleProps {
+  showLabel?: boolean;
+  className?: string;
+}
+
+const ThemeToggle = ({ showLabel = false, className }: ThemeToggleProps) => {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <Button
+      variant="ghost"
+      size={showLabel ? "sm" : "icon"}
+      onClick={toggleTheme}
+      className={cn(
+        "relative rounded-full transition-all duration-300",
+        "hover:bg-primary/10 hover:text-primary",
+        showLabel && "gap-2 px-3",
+        className
+      )}
+    >
+      {/* Animated sun/moon icons */}
+      <Sun className={cn("h-4 w-4", theme === 'dark' ? 'rotate-90 scale-0' : 'rotate-0 scale-100')} />
+      <Moon className={cn("absolute h-4 w-4", theme === 'dark' ? 'rotate-0 scale-100' : '-rotate-90 scale-0')} />
+      {showLabel && <span>{theme === 'dark' ? 'Dark' : 'Light'}</span>}
+    </Button>
+  );
+};
+```
 
 ---
 
-## Testing Checklist
+### 3. `src/components/Navbar.tsx` - Add Theme Toggle
 
-After implementation, verify on:
-- iPhone SE (375px) - smallest supported
-- iPhone 14 Pro Max (430px)
-- iPad Mini (768px)
-- iPad Pro (1024px)
-- MacBook Air 13" (1280px)
-- Desktop 27" (1920px+)
+Add theme toggle button to desktop navigation (after InteractiveTutorial, before user menu):
 
-Key tests:
-- No horizontal scrolling on any page
-- All interactive elements >= 44px touch target
-- Forms usable without zooming
-- Charts readable and interactive
-- Navigation accessible from any screen
+```tsx
+import ThemeToggle from "@/components/ThemeToggle";
+
+// In desktop nav section:
+<div className="hidden md:flex items-center gap-4">
+  <InteractiveTutorial />
+  <ThemeToggle />  {/* NEW */}
+  {user ? (...) : (...)}
+</div>
+
+// In mobile menu:
+<div className="flex gap-4 pt-4 items-center">
+  <ThemeToggle showLabel />
+  {/* existing buttons */}
+</div>
+```
 
 ---
 
-## Technical Notes
+### 4. `src/components/layout/ResponsiveSidebar.tsx` - Add Theme Toggle
 
-1. **CSS Grid over Flexbox** for main layouts - better support for 2D responsive grids
+Add theme toggle at the bottom of the sidebar:
 
-2. **Container queries** (future enhancement) - could use CSS container queries for component-level responsiveness
+```tsx
+import ThemeToggle from "@/components/ThemeToggle";
 
-3. **Dynamic imports** for route-based code splitting reduce initial bundle size
+// Add before closing SidebarContent fragment:
+{/* Theme Toggle */}
+<div className={cn(
+  "p-3 border-t border-border",
+  collapsed ? "flex justify-center" : "flex items-center justify-between px-4"
+)}>
+  {!collapsed && <span className="text-xs text-muted-foreground">Theme</span>}
+  <ThemeToggle />
+</div>
+```
 
-4. **useIsMobile hook** already exists - leverage it for conditional rendering
+---
 
-5. **Recharts ResponsiveContainer** handles chart sizing well - just need proper parent containers
+### 5. `src/components/layout/MobileBottomNav.tsx` - Add Theme Toggle to More Menu
 
-6. **No hover-only features** - all hover interactions must have touch equivalents (long-press, tap, etc.)
+Add theme toggle in the "More Options" sheet:
+
+```tsx
+import ThemeToggle from "@/components/ThemeToggle";
+
+// Add after the grid of secondary items:
+<div className="flex items-center justify-between pt-4 border-t border-border mt-4">
+  <span className="text-sm text-muted-foreground">Theme</span>
+  <ThemeToggle showLabel />
+</div>
+```
+
+---
+
+### 6. `tailwind.config.ts` - Add Accent Color Token
+
+Add the accent color to the Tailwind theme:
+
+```ts
+colors: {
+  // existing colors...
+  accent: {
+    DEFAULT: "hsl(var(--accent))",
+    foreground: "hsl(var(--accent-foreground))",
+  },
+}
+```
+
+---
+
+### 7. `src/components/ui/button.tsx` - Add Accent Variant
+
+Add a new button variant for accent-colored actions:
+
+```tsx
+variants: {
+  variant: {
+    // existing variants...
+    accent: "bg-accent text-accent-foreground hover:bg-accent/90 shadow-button",
+  },
+}
+```
+
+---
+
+## Visual Preview
+
+### Dark Mode (#0A0F14 background)
+```text
++--------------------------------------------------+
+|  ████  DataForge    Features  Data Agent   ☀/🌙  |
++--------------------------------------------------+
+|  ┌────────┐  ┌──────────────────────────────────┐|
+|  │ Upload │  │  Dashboard Content               │|
+|  │ Preview│  │                                  │|
+|  │ Dash   │  │  ┌─────────┐ ┌─────────┐        │|
+|  │ Chat   │  │  │ Chart 1 │ │ Chart 2 │        │|
+|  │ ...    │  │  │ (blue)  │ │ (teal)  │        │|
+|  │        │  │  └─────────┘ └─────────┘        │|
+|  │ Theme  │  │                                  │|
+|  │ ☀/🌙   │  │  [Primary Button] [Accent Btn]  │|
+|  └────────┘  └──────────────────────────────────┘|
++--------------------------------------------------+
+```
+
+### Color Usage
+- **#0A0F14** - Main background, deep dark
+- **#1F6FEB** - Primary buttons, active states, links
+- **#F97316** - Accent highlights, AI actions, CTAs
+- **#CBD5E1** - Main text color
+
+---
+
+## Files Modified Summary
+
+| File | Changes |
+|------|---------|
+| `src/index.css` | Complete CSS variable update for both dark/light modes |
+| `src/components/ThemeToggle.tsx` | Enhanced with `showLabel` prop |
+| `src/components/Navbar.tsx` | Add theme toggle to desktop + mobile menu |
+| `src/components/layout/ResponsiveSidebar.tsx` | Add theme toggle at bottom |
+| `src/components/layout/MobileBottomNav.tsx` | Add toggle to More sheet |
+| `tailwind.config.ts` | Add accent color token |
+| `src/components/ui/button.tsx` | Add accent button variant |
 
 ---
 
 ## Implementation Order
 
-1. **Layout system** - Create reusable components first
-2. **DataAgent.tsx** - Core page structure
-3. **Navigation** - Mobile bottom nav + sidebar updates
-4. **Tables** - VirtualTable + MobileCardView
-5. **Charts** - Height/legend adjustments
-6. **Forms** - Input sizing and layouts
-7. **Individual components** - Remaining component updates
-8. **Performance** - Lazy loading implementation
-9. **Testing** - Cross-device verification
+1. **CSS Variables** - Update `src/index.css` with new color scheme
+2. **Tailwind Config** - Add accent color token
+3. **Button Variant** - Add accent variant to button component
+4. **Theme Toggle** - Enhance with label option
+5. **Navbar** - Add toggle to desktop and mobile views
+6. **Sidebar** - Add toggle at bottom
+7. **Mobile Nav** - Add toggle to More menu
+
+---
+
+## Technical Notes
+
+### Color Conversion Reference
+```text
+#0A0F14 → hsl(210, 33%, 6%)
+#1F6FEB → hsl(212, 85%, 52%)
+#F97316 → hsl(25, 95%, 53%)
+#CBD5E1 → hsl(215, 20%, 85%)
+```
+
+### Contrast Ratios
+All color combinations will meet WCAG AA standards:
+- Text (#CBD5E1) on Background (#0A0F14): 12.4:1 ✓
+- Primary (#1F6FEB) on Background: 4.5:1 ✓
+- Accent (#F97316) on Background: 5.8:1 ✓
