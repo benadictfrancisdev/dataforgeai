@@ -185,7 +185,7 @@ const DataUpload = ({ onDataLoaded }: DataUploadProps) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Drop Zone */}
       <div
         data-onboarding="upload-zone"
@@ -193,7 +193,7 @@ const DataUpload = ({ onDataLoaded }: DataUploadProps) => {
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         className={`
-          relative border-2 border-dashed rounded-xl p-12
+          relative border-2 border-dashed rounded-xl p-6 sm:p-12
           transition-all duration-300 cursor-pointer
           ${isDragging 
             ? 'border-primary bg-primary/10 scale-[1.02]' 
@@ -209,65 +209,65 @@ const DataUpload = ({ onDataLoaded }: DataUploadProps) => {
           disabled={isLoading}
         />
         
-        <div className="flex flex-col items-center text-center space-y-4">
+        <div className="flex flex-col items-center text-center space-y-3 sm:space-y-4">
           <div className={`
-            w-16 h-16 rounded-2xl flex items-center justify-center
+            w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center
             ${isDragging ? 'bg-primary text-primary-foreground' : 'bg-muted'}
             transition-colors duration-300
           `}>
             {isLoading ? (
-              <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+              <div className="w-6 h-6 sm:w-8 sm:h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             ) : (
-              <Upload className="w-8 h-8" />
+              <Upload className="w-6 h-6 sm:w-8 sm:h-8" />
             )}
           </div>
           
           <div>
-            <h3 className="text-xl font-semibold mb-2">
+            <h3 className="text-lg sm:text-xl font-semibold mb-1 sm:mb-2">
               {isDragging ? "Drop your file here" : "Upload your data"}
             </h3>
-            <p className="text-muted-foreground">
-              Drag & drop your CSV or JSON file, or click to browse
+            <p className="text-sm text-muted-foreground">
+              Drag & drop your file, or tap to browse
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
             <FileSpreadsheet className="w-4 h-4" />
-            <span>Supports CSV, Excel (.xlsx, .xls), and JSON formats</span>
+            <span>Supports CSV, Excel, and JSON</span>
           </div>
         </div>
       </div>
 
       {/* Sample Datasets */}
-      <div data-onboarding="sample-button" className="bg-card/50 border border-border/50 rounded-xl p-6">
+      <div data-onboarding="sample-button" className="bg-card/50 border border-border/50 rounded-xl p-4 sm:p-6">
         <div className="flex items-start gap-3 mb-4">
-          <Database className="w-5 h-5 text-primary mt-0.5" />
+          <Database className="w-5 h-5 text-primary mt-0.5 shrink-0" />
           <div>
-            <h4 className="font-medium mb-1">Try Sample Datasets</h4>
-            <p className="text-sm text-muted-foreground">
-              No data ready? Load a sample dataset to explore all features instantly.
+            <h4 className="font-medium mb-1 text-sm sm:text-base">Try Sample Datasets</h4>
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              No data ready? Load a sample dataset to explore features.
             </p>
           </div>
         </div>
         
-        <div className="grid sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
           {SAMPLE_DATASETS.map((sample) => (
             <Button
               key={sample.id}
               variant="outline"
-              className="justify-start h-auto py-3 px-4"
+              className="justify-start h-auto py-2.5 sm:py-3 px-3 sm:px-4"
               onClick={() => handleLoadSampleData(sample.id)}
               disabled={loadingSample !== null}
             >
-              <div className="flex items-center gap-3 w-full">
+              <div className="flex items-center gap-2 sm:gap-3 w-full">
                 {loadingSample === sample.id ? (
                   <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 ) : (
                   <Sparkles className="w-4 h-4 text-primary shrink-0" />
                 )}
                 <div className="text-left flex-1 min-w-0">
-                  <p className="font-medium text-sm truncate">{sample.name}</p>
-                  <p className="text-xs text-muted-foreground">{sample.rowCount.toLocaleString()} rows</p>
+                  <p className="font-medium text-xs sm:text-sm truncate">{sample.name}</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground">{sample.rowCount.toLocaleString()} rows</p>
                 </div>
               </div>
             </Button>

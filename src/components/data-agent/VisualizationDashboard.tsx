@@ -306,22 +306,22 @@ const VisualizationDashboard = ({ dataset }: VisualizationDashboardProps) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Export Buttons */}
-      <div className="flex justify-end gap-2">
-        <Button onClick={() => exportToCsv(data, dataset.name)} variant="outline" className="gap-2">
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button onClick={() => exportToCsv(data, dataset.name)} variant="outline" size="sm" className="gap-2 text-xs sm:text-sm">
           <Download className="h-4 w-4" />
-          Export CSV
+          <span className="hidden xs:inline">Export</span> CSV
         </Button>
-        <Button onClick={handleExportPdf} variant="outline" className="gap-2">
+        <Button onClick={handleExportPdf} variant="outline" size="sm" className="gap-2 text-xs sm:text-sm">
           <Download className="h-4 w-4" />
-          Export PDF
+          <span className="hidden xs:inline">Export</span> PDF
         </Button>
       </div>
 
       {/* Enhanced KPI Cards with Confidence */}
       {kpis.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <KPICard
             title="Total Records"
             value={data.length.toLocaleString()}
@@ -386,32 +386,32 @@ const VisualizationDashboard = ({ dataset }: VisualizationDashboardProps) => {
 
       {/* Main Visualization Tabs */}
       <Tabs defaultValue="auto" className="w-full">
-        <TabsList className="grid w-full grid-cols-7 bg-card/50 p-1 h-auto">
-          <TabsTrigger value="auto" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm py-2">
+        <TabsList className="flex overflow-x-auto scrollbar-hide gap-1 bg-card/50 p-1 h-auto w-full md:grid md:grid-cols-7">
+          <TabsTrigger value="auto" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm py-2 px-2 sm:px-3 whitespace-nowrap flex-shrink-0">
             <BarChart3 className="h-4 w-4 mr-1 hidden sm:inline" />
             Auto
           </TabsTrigger>
-          <TabsTrigger value="custom" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm py-2">
+          <TabsTrigger value="custom" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm py-2 px-2 sm:px-3 whitespace-nowrap flex-shrink-0">
             <Wrench className="h-4 w-4 mr-1 hidden sm:inline" />
             Builder
           </TabsTrigger>
-          <TabsTrigger value="insights" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm py-2">
+          <TabsTrigger value="insights" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm py-2 px-2 sm:px-3 whitespace-nowrap flex-shrink-0">
             <Lightbulb className="h-4 w-4 mr-1 hidden sm:inline" />
             Insights
           </TabsTrigger>
-          <TabsTrigger value="chat" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm py-2">
+          <TabsTrigger value="chat" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm py-2 px-2 sm:px-3 whitespace-nowrap flex-shrink-0">
             <MessageSquare className="h-4 w-4 mr-1 hidden sm:inline" />
             AI Chat
           </TabsTrigger>
-          <TabsTrigger value="report" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm py-2">
+          <TabsTrigger value="report" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm py-2 px-2 sm:px-3 whitespace-nowrap flex-shrink-0">
             <FileText className="h-4 w-4 mr-1 hidden sm:inline" />
             Report
           </TabsTrigger>
-          <TabsTrigger value="ai-report" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm py-2">
+          <TabsTrigger value="ai-report" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm py-2 px-2 sm:px-3 whitespace-nowrap flex-shrink-0">
             <Sparkles className="h-4 w-4 mr-1 hidden sm:inline" />
             AI Report
           </TabsTrigger>
-          <TabsTrigger value="quick" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm py-2">
+          <TabsTrigger value="quick" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm py-2 px-2 sm:px-3 whitespace-nowrap flex-shrink-0">
             <PieChart className="h-4 w-4 mr-1 hidden sm:inline" />
             Quick
           </TabsTrigger>
