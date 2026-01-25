@@ -3,14 +3,9 @@ import {
   Database,
   ChevronRight
 } from "lucide-react";
-import {
-  Sheet,
-  SheetContent,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useState } from "react";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface NavGroup {
   label: string;
@@ -48,14 +43,10 @@ const ResponsiveSidebar = ({
   children
 }: ResponsiveSidebarProps) => {
   const isMobile = useIsMobile();
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const handleItemClick = (value: string, isDisabled: boolean) => {
     if (!isDisabled) {
       onTabChange(value);
-      if (isMobile) {
-        setDrawerOpen(false);
-      }
     }
   };
 
@@ -145,6 +136,15 @@ const ResponsiveSidebar = ({
           {children}
         </div>
       )}
+
+      {/* Theme Toggle */}
+      <div className={cn(
+        "p-3 border-t border-border",
+        collapsed ? "flex justify-center" : "flex items-center justify-between px-4"
+      )}>
+        {!collapsed && <span className="text-xs text-muted-foreground">Theme</span>}
+        <ThemeToggle />
+      </div>
     </>
   );
 

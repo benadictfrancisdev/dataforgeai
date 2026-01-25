@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import Logo from "@/components/Logo";
+import ThemeToggle from "@/components/ThemeToggle";
 import InteractiveTutorial from "@/components/tutorial/InteractiveTutorial";
 import {
   DropdownMenu,
@@ -53,6 +54,7 @@ const Navbar = () => {
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-4">
             <InteractiveTutorial />
+            <ThemeToggle />
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -117,7 +119,8 @@ const Navbar = () => {
               <Link to="/data-agent" className="text-muted-foreground hover:text-foreground transition-colors">
                 Data Agent
               </Link>
-              <div className="flex gap-4 pt-4">
+              <div className="flex gap-4 pt-4 items-center">
+                <ThemeToggle showLabel />
                 {user ? (
                   <Button variant="ghost" size="sm" className="flex-1" onClick={handleSignOut}>
                     Sign Out
