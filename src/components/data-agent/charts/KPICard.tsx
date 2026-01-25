@@ -1,18 +1,20 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Minus, LucideIcon } from "lucide-react";
+import React from "react";
 
 interface KPICardProps {
   title: string;
   value: string | number;
   change?: number;
   changeLabel?: string;
-  icon?: LucideIcon | React.ReactNode;
+  icon?: LucideIcon;
+  iconElement?: React.ReactNode;
   color?: "primary" | "success" | "warning" | "danger";
   className?: string;
 }
 
-const KPICard = ({ title, value, change, changeLabel, icon: Icon, color = "primary", className }: KPICardProps) => {
+const KPICard = ({ title, value, change, changeLabel, icon: Icon, iconElement, color = "primary", className }: KPICardProps) => {
   const getTrendIcon = () => {
     if (change === undefined || change === 0) return <Minus className="w-3 h-3" />;
     return change > 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />;
@@ -33,16 +35,15 @@ const KPICard = ({ title, value, change, changeLabel, icon: Icon, color = "prima
   };
 
   const renderIcon = () => {
-    if (!Icon) return null;
+    // If iconElement is provided, use it directly (already a ReactNode)
+    if (iconElement) return iconElement;
     
-    // Check if Icon is a Lucide component (function/object with $$typeof) or a ReactNode
-    // Lucide icons are forwardRef components which have $$typeof and render properties
-    if (typeof Icon === 'function' || (typeof Icon === 'object' && Icon !== null && '$$typeof' in Icon && 'render' in Icon)) {
-      const IconComponent = Icon as LucideIcon;
-      return <IconComponent className="w-4 h-4" />;
+    // If Icon is a Lucide component, render it
+    if (Icon) {
+      return <Icon className="w-4 h-4" />;
     }
-    // Otherwise it's already a rendered ReactNode
-    return Icon;
+    
+    return null;
   };
 
   return (
@@ -72,7 +73,7 @@ const KPICard = ({ title, value, change, changeLabel, icon: Icon, color = "prima
             )}
           </div>
           
-          {Icon && (
+          {(Icon || iconElement) && (
             <div className={cn("w-8 h-8 rounded-md flex items-center justify-center shrink-0", getIconColor())}>
               {renderIcon()}
             </div>
