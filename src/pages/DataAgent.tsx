@@ -141,6 +141,7 @@ const DataAgent = () => {
         <div className="flex-1 flex pt-16">
           {/* Linear-style Sidebar */}
           <aside 
+            data-onboarding="sidebar"
             className={cn(
               "fixed left-0 top-16 h-[calc(100vh-4rem)] bg-card border-r border-border z-40 transition-all duration-200 flex flex-col",
               sidebarCollapsed ? "w-16" : "w-56"
