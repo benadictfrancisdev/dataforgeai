@@ -35,11 +35,13 @@ const KPICard = ({ title, value, change, changeLabel, icon: Icon, color = "prima
   const renderIcon = () => {
     if (!Icon) return null;
     
-    // Check if Icon is a Lucide component (function) or a ReactNode
-    if (typeof Icon === 'function') {
+    // Check if Icon is a Lucide component (function/object with $$typeof) or a ReactNode
+    // Lucide icons are forwardRef components which have $$typeof and render properties
+    if (typeof Icon === 'function' || (typeof Icon === 'object' && Icon !== null && '$$typeof' in Icon && 'render' in Icon)) {
       const IconComponent = Icon as LucideIcon;
       return <IconComponent className="w-4 h-4" />;
     }
+    // Otherwise it's already a rendered ReactNode
     return Icon;
   };
 
