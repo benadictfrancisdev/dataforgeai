@@ -235,7 +235,7 @@ const CustomChartBuilder = ({ data, columns, columnTypes }: CustomChartBuilderPr
                   <SelectValue placeholder="Select column" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border">
-                  {columns.map(col => (
+                  {columns.filter(col => col && col.trim() !== '').map(col => (
                     <SelectItem key={col} value={col}>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className={`text-xs ${getColumnBadge(col)}`}>
@@ -259,7 +259,7 @@ const CustomChartBuilder = ({ data, columns, columnTypes }: CustomChartBuilderPr
                   <SelectValue placeholder="Select column" />
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border">
-                  {columns.map(col => (
+                  {columns.filter(col => col && col.trim() !== '').map(col => (
                     <SelectItem key={col} value={col}>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className={`text-xs ${getColumnBadge(col)}`}>
@@ -324,7 +324,7 @@ const CustomChartBuilder = ({ data, columns, columnTypes }: CustomChartBuilderPr
                 </SelectTrigger>
                 <SelectContent className="bg-popover border-border">
                   <SelectItem value="none">No filter</SelectItem>
-                  {columns.map(col => (
+                  {columns.filter(col => col && col.trim() !== '').map(col => (
                     <SelectItem key={col} value={col}>{col}</SelectItem>
                   ))}
                 </SelectContent>
@@ -343,7 +343,7 @@ const CustomChartBuilder = ({ data, columns, columnTypes }: CustomChartBuilderPr
                   </SelectTrigger>
                   <SelectContent className="bg-popover border-border">
                     <SelectItem value="all">All values</SelectItem>
-                    {filterValues.map(val => (
+                    {filterValues.filter(val => val && val.trim() !== '').map(val => (
                       <SelectItem key={val} value={val}>{val}</SelectItem>
                     ))}
                   </SelectContent>
