@@ -15,10 +15,11 @@ import AutoDashboard from "@/components/data-agent/AutoDashboard";
 import RealTimeStream from "@/components/data-agent/RealTimeStream";
 import PowerBIDashboard from "@/components/data-agent/PowerBIDashboard";
 import WorkflowBuilder from "@/components/data-agent/WorkflowBuilder";
+import { MLWorkbench } from "@/components/data-agent/ml";
 import { CollaborationProvider, JoinCollaborationDialog } from "@/components/data-agent/collaboration";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Upload, Table, BarChart3, MessageSquare, PieChart, Loader2, FileText, Sparkles, Activity, LayoutDashboard, Zap, Radio, Layers, Link2 } from "lucide-react";
+import { Upload, Table, BarChart3, MessageSquare, PieChart, Loader2, FileText, Sparkles, Activity, LayoutDashboard, Zap, Radio, Layers, Link2, Brain } from "lucide-react";
 
 export interface DatasetState {
   id?: string;
@@ -94,6 +95,7 @@ const DataAgent = () => {
     { value: "stream", label: "Live Stream", icon: Radio, requiresData: true },
     { value: "visualize", label: "Visualize", icon: PieChart, requiresData: true },
     { value: "dashboard", label: "Dashboard", icon: LayoutDashboard, requiresData: true },
+    { value: "ml", label: "ML", icon: Brain, requiresData: true },
     { value: "predict", label: "Predict", icon: Activity, requiresData: true },
     { value: "analyze", label: "Analyze", icon: BarChart3, requiresData: true },
     { value: "report", label: "Report", icon: FileText, requiresData: true },
@@ -224,6 +226,17 @@ const DataAgent = () => {
               <div className={activeTab === "dashboard" ? "block" : "hidden"}>
                 {dataset && (
                   <AutoDashboard
+                    data={dataset.cleanedData || dataset.rawData}
+                    columns={dataset.columns}
+                    columnTypes={getColumnTypes()}
+                    datasetName={dataset.name}
+                  />
+                )}
+              </div>
+
+              <div className={activeTab === "ml" ? "block" : "hidden"}>
+                {dataset && (
+                  <MLWorkbench
                     data={dataset.cleanedData || dataset.rawData}
                     columns={dataset.columns}
                     columnTypes={getColumnTypes()}
