@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -15,6 +15,7 @@ import AutoDashboard from "@/components/data-agent/AutoDashboard";
 import RealTimeStream from "@/components/data-agent/RealTimeStream";
 import PowerBIDashboard from "@/components/data-agent/PowerBIDashboard";
 import WorkflowBuilder from "@/components/data-agent/WorkflowBuilder";
+import { CollaborationProvider, JoinCollaborationDialog } from "@/components/data-agent/collaboration";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Upload, Table, BarChart3, MessageSquare, PieChart, Loader2, FileText, Sparkles, Activity, LayoutDashboard, Zap, Radio, Layers, Link2 } from "lucide-react";
@@ -31,8 +32,12 @@ export interface DatasetState {
 const DataAgent = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [dataset, setDataset] = useState<DatasetState | null>(null);
   const [activeTab, setActiveTab] = useState("upload");
+  
+  // Check for room parameter in URL (for joining via shared link)
+  const roomFromUrl = searchParams.get("room");
 
   useEffect(() => {
     if (!loading && !user) {
@@ -96,43 +101,47 @@ const DataAgent = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <main className="container mx-auto px-4 sm:px-6 py-20 sm:py-24">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-10 sm:mb-14 animate-fade-in">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20 mb-6">
-              <Sparkles className="w-4 h-4 text-primary" />
-              <span className="text-sm font-medium text-primary">AI-Powered Analytics</span>
+    <CollaborationProvider>
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <main className="container mx-auto px-4 sm:px-6 py-20 sm:py-24">
+          <div className="max-w-7xl mx-auto">
+            {/* Header */}
+            <div className="text-center mb-10 sm:mb-14 animate-fade-in">
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20">
+                  <Sparkles className="w-4 h-4 text-primary" />
+                  <span className="text-sm font-medium text-primary">AI-Powered Analytics</span>
+                </div>
+                <JoinCollaborationDialog datasetName={dataset?.name} />
+              </div>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 tracking-tight">
+                AI Data
+                <span className="block gradient-text">
+                  Agent
+                </span>
+              </h1>
+              <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+                Upload your data and let our AI agents clean, validate, analyze, and help you explore actionable insights.
+              </p>
             </div>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-4 tracking-tight">
-              AI Data
-              <span className="block gradient-text">
-                Agent
-              </span>
-            </h1>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Upload your data and let our AI agents clean, validate, analyze, and help you explore actionable insights.
-            </p>
-          </div>
 
-          {/* Dataset Info Badge */}
-          {dataset && (
-            <div className="flex justify-center mb-6 animate-slide-up">
-              <Badge variant="secondary" className="px-4 py-2 text-sm gap-2">
-                <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
-                {dataset.name} • {dataset.rawData.length.toLocaleString()} rows • {dataset.columns.length} columns
-                {dataset.status === "cleaned" && (
-                  <Badge className="ml-2 bg-primary/20 text-primary border-0">Cleaned</Badge>
-                )}
-              </Badge>
-            </div>
-          )}
+            {/* Dataset Info Badge */}
+            {dataset && (
+              <div className="flex justify-center mb-6 animate-slide-up">
+                <Badge variant="secondary" className="px-4 py-2 text-sm gap-2">
+                  <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
+                  {dataset.name} • {dataset.rawData.length.toLocaleString()} rows • {dataset.columns.length} columns
+                  {dataset.status === "cleaned" && (
+                    <Badge className="ml-2 bg-primary/20 text-primary border-0">Cleaned</Badge>
+                  )}
+                </Badge>
+              </div>
+            )}
 
-          {/* Main Content */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            {/* Fixed two-row grid layout */}
+            {/* Main Content */}
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              {/* Fixed two-row grid layout */}
             <div className="mb-8">
               <TabsList className="w-full h-auto bg-card/80 backdrop-blur-sm p-3 rounded-2xl border border-border shadow-card grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-12 gap-2">
                 {tabs.map((tab) => {
@@ -251,6 +260,7 @@ const DataAgent = () => {
       </main>
       <Footer />
     </div>
+    </CollaborationProvider>
   );
 };
 
