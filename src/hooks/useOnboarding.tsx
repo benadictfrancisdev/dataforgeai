@@ -181,10 +181,21 @@ export const OnboardingProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
+// Default value for when hook is used outside provider
+const defaultOnboardingValue: OnboardingContextValue = {
+  state: { isComplete: true, currentStep: 0, isActive: false },
+  currentStepData: null,
+  startOnboarding: () => {},
+  nextStep: () => {},
+  prevStep: () => {},
+  skipOnboarding: () => {},
+  completeOnboarding: () => {},
+  resetOnboarding: () => {},
+  totalSteps: ONBOARDING_STEPS.length,
+};
+
 export const useOnboarding = () => {
   const context = useContext(OnboardingContext);
-  if (!context) {
-    throw new Error('useOnboarding must be used within an OnboardingProvider');
-  }
-  return context;
+  // Return default value instead of throwing - allows component to render outside provider
+  return context ?? defaultOnboardingValue;
 };
