@@ -621,7 +621,7 @@ export type Database = {
           processed: boolean | null
           received_at: string | null
           source_ip: string | null
-          user_id: string
+          user_id: string | null
           webhook_id: string
         }
         Insert: {
@@ -631,7 +631,7 @@ export type Database = {
           processed?: boolean | null
           received_at?: string | null
           source_ip?: string | null
-          user_id: string
+          user_id?: string | null
           webhook_id: string
         }
         Update: {
@@ -641,7 +641,7 @@ export type Database = {
           processed?: boolean | null
           received_at?: string | null
           source_ip?: string | null
-          user_id?: string
+          user_id?: string | null
           webhook_id?: string
         }
         Relationships: []
