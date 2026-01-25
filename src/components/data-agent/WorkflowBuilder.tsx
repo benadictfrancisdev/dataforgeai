@@ -37,10 +37,12 @@ import {
   Pause,
   Timer,
   TrendingUp,
-  Activity
+  Activity,
+  Sparkles
 } from "lucide-react";
 import { DatasetState } from "@/pages/DataAgent";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import DatabaseConnector from "./DatabaseConnector";
 
 interface DataConnector {
   id: string;
@@ -712,10 +714,14 @@ const WorkflowBuilder = ({ onDataLoaded }: WorkflowBuilderProps) => {
         </CardHeader>
         <CardContent className="p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="grid grid-cols-3 w-full max-w-lg mb-6">
+            <TabsList className="grid grid-cols-4 w-full max-w-2xl mb-6">
               <TabsTrigger value="connectors" className="gap-2">
                 <Link2 className="w-4 h-4" />
                 Connectors
+              </TabsTrigger>
+              <TabsTrigger value="database" className="gap-2">
+                <Database className="w-4 h-4" />
+                Database
               </TabsTrigger>
               <TabsTrigger value="schedules" className="gap-2">
                 <Clock className="w-4 h-4" />
@@ -839,6 +845,11 @@ const WorkflowBuilder = ({ onDataLoaded }: WorkflowBuilderProps) => {
                   <p className="text-sm">Add a connector above to import data from external sources.</p>
                 </div>
               )}
+            </TabsContent>
+
+            {/* Database Tab */}
+            <TabsContent value="database" className="space-y-6">
+              <DatabaseConnector onDataLoaded={onDataLoaded} />
             </TabsContent>
 
             {/* Schedules Tab */}
