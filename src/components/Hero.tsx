@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Upload, Play } from "lucide-react";
 import { Link } from "react-router-dom";
-import heroBg from "@/assets/hero-bg.png";
 import DemoModal from "./DemoModal";
 
 const Hero = () => {
@@ -10,24 +9,17 @@ const Hero = () => {
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
-      {/* Background Image with ocean overlay */}
-      <div className="absolute inset-0 z-0">
-        <img 
-          src={heroBg} 
-          alt="AI Data Visualization"
-          className="w-full h-full object-cover opacity-20"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-ocean-light/60 via-background/70 to-transparent dark:from-ocean-deep/40 dark:via-background/60" />
-      </div>
-
       {/* Grid Pattern Overlay */}
-      <div className="absolute inset-0 grid-pattern opacity-10" />
+      <div className="absolute inset-0 grid-pattern opacity-5" />
 
-      {/* Ocean Glow Effect */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[800px] h-[800px] bg-ocean-glow/20 dark:bg-ocean-glow/15 rounded-full blur-[180px] animate-pulse-glow" />
-      
-      {/* Secondary glow for depth */}
-      <div className="absolute top-1/3 left-1/3 w-[400px] h-[400px] bg-cyan/15 rounded-full blur-[120px] animate-pulse-glow" style={{ animationDelay: '1s' }} />
+      {/* Subtle center glow for content area */}
+      <div 
+        className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle at center, rgba(31, 111, 235, 0.05) 0%, transparent 60%)',
+          filter: 'blur(40px)',
+        }}
+      />
 
       <div className="container mx-auto px-6 relative z-10">
         <div className="max-w-4xl mx-auto text-center">
@@ -74,15 +66,15 @@ const Hero = () => {
           {/* Trust Indicators */}
           <div className="mt-12 flex flex-wrap justify-center gap-6 text-sm text-muted-foreground animate-slide-up" style={{ animationDelay: '0.35s' }}>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-success" />
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
               Enterprise-grade security
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-success" />
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
               GDPR compliant
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-success" />
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
               99.9% uptime SLA
             </div>
           </div>
