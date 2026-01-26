@@ -4,16 +4,14 @@ import Features from "@/components/Features";
 import HowItWorks from "@/components/HowItWorks";
 import CTASection from "@/components/CTASection";
 import Footer from "@/components/Footer";
-import WaveBackground from "@/components/WaveBackground";
-import InteractiveWaves from "@/components/InteractiveWaves";
-import SeaCreatures from "@/components/SeaCreatures";
+import HeroBackground from "@/components/HeroBackground";
+import NetworkBackground from "@/components/NetworkBackground";
 
 const Index = () => {
   return (
     <div className="min-h-screen bg-background relative overflow-hidden">
-      <WaveBackground />
-      <InteractiveWaves />
-      <SeaCreatures />
+      <HeroBackground />
+      <NetworkBackground />
       <Navbar />
       <main className="relative z-10">
         <Hero />
