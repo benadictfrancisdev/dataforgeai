@@ -22,10 +22,12 @@ import {
   Tablet,
   Download,
   Eye,
-  FileDown
+  FileDown,
+  Server
 } from "lucide-react";
 import { toast } from "sonner";
 import { usePdfExport } from "@/hooks/usePdfExport";
+import { aiAPI } from "@/services/api";
 
 interface DashboardSuggestion {
   id: string;
