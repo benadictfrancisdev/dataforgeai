@@ -18,11 +18,11 @@ class DataAnalysisService:
             
             # Basic info
             basic_info = {
-                "total_rows": len(df),
-                "total_columns": len(df.columns),
+                "total_rows": int(len(df)),
+                "total_columns": int(len(df.columns)),
                 "columns": list(df.columns),
-                "memory_usage": df.memory_usage(deep=True).sum(),
-                "duplicate_rows": df.duplicated().sum()
+                "memory_usage": int(df.memory_usage(deep=True).sum()),
+                "duplicate_rows": int(df.duplicated().sum())
             }
             
             # Column types analysis
