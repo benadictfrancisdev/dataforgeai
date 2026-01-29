@@ -141,30 +141,30 @@ const NaturalLanguageEngine = ({
     startTimeRef.current = performance.now();
 
     try {
-      const context = getDataContext();
-      
-      const { data: response, error } = await supabase.functions.invoke('data-agent', {
-        body: {
-          action: 'nlp-query',
-          datasetName,
-          query: query.trim(),
-          dataContext: JSON.stringify(context),
-          columns,
-          columnTypes,
-          conversationHistory: messages.slice(-6).map(m => ({ role: m.role, content: m.content }))
-        }
-      });
+      // Use backend AI API
+      const response = await aiAPI.answerQuery(
+        data.slice(0, 500), // Limit data for API
+        columns,
+        query.trim(),
+        messages.slice(-6).map(m => ({ role: m.role, content: m.content }))
+      );
 
       const responseTime = (performance.now() - startTimeRef.current) / 1000;
 
-      if (error) throw error;
+      if (!response.success || !response.data) {
+        throw new Error(response.error || "Query failed");
+      }
 
       // Parse AI response
-      const aiResponse = response?.answer || response?.content || "I've analyzed your data. Here's what I found...";
-      const charts = response?.charts || [];
-      const insights = response?.insights || [];
-      const actions = response?.actions || [];
-      const confidence = response?.confidence || (95 + Math.random() * 4);
+      const aiResponse = response.data.answer || "I've analyzed your data. Here's what I found...";
+      const charts = response.data.suggested_charts?.map(c => ({
+        type: c.type as ChartSuggestion["type"],
+        title: `${c.type} chart`,
+        xAxis: columns[0],
+        yAxis: columns[1] || columns[0],
+        description: c.type
+      })) || [];
+      const confidence = response.data.confidence * 100 || 95;
 
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
@@ -174,8 +174,8 @@ const NaturalLanguageEngine = ({
         responseTime: Math.round(responseTime * 100) / 100,
         confidence: Math.round(confidence * 10) / 10,
         charts,
-        insights,
-        actions
+        insights: [],
+        actions: []
       };
 
       setMessages(prev => [...prev, assistantMessage]);
