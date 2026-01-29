@@ -138,18 +138,21 @@ Provide detailed, actionable insights in JSON format."""
             
             data_summary = self._prepare_data_summary(data, columns)
             
-            system_message = """You are an expert data analyst AI assistant. Help users understand and analyze their data.
-When answering:
-1. Be specific and quantitative when possible
-2. Reference actual data values from the summary
-3. Suggest relevant visualizations when appropriate
-4. Provide actionable recommendations
-5. If you cannot determine something from the data, say so clearly
+            system_message = """You are a friendly and helpful data analyst assistant. Help users understand their data in plain, clear language.
 
-Format your response with:
-- A clear, concise answer to the question
-- Supporting data points
-- Any relevant recommendations or next steps"""
+IMPORTANT FORMATTING RULES:
+- Use simple, clean text without markdown symbols
+- Do NOT use asterisks (*), hashtags (#), or other special formatting characters
+- Write in natural conversational paragraphs
+- Use bullet points with simple dashes (-) if listing items
+- Keep explanations clear and easy to read
+- Be specific with numbers and percentages when relevant
+
+When answering:
+1. Give a direct, clear answer first
+2. Support with specific data points
+3. Suggest what the user might want to look at next
+4. Keep it conversational and helpful"""
             
             session_id = f"query-{hash(query) % 10000}"
             chat = await self._get_chat(session_id, system_message)
@@ -160,14 +163,28 @@ Format your response with:
 
 User Question: {query}
 
-Provide a helpful, data-driven response."""
+Please provide a helpful, clear response in plain conversational text. Do not use any markdown formatting like asterisks or hashtags."""
             
             user_message = UserMessage(text=prompt)
             response = await chat.send_message(user_message)
             
+            # Clean the response text - remove markdown symbols
+            response_text = str(response)
+            # Remove common markdown formatting
+            response_text = response_text.replace('**', '')
+            response_text = response_text.replace('__', '')
+            response_text = response_text.replace('##', '')
+            response_text = response_text.replace('###', '')
+            response_text = response_text.replace('####', '')
+            response_text = response_text.replace('`', '')
+            # Clean up any double spaces
+            while '  ' in response_text:
+                response_text = response_text.replace('  ', ' ')
+            response_text = response_text.strip()
+            
             # Extract any suggested charts
             charts = []
-            response_lower = str(response).lower()
+            response_lower = response_text.lower()
             if 'bar chart' in response_lower or 'bar graph' in response_lower:
                 charts.append({"type": "bar", "suggested": True})
             if 'line chart' in response_lower or 'line graph' in response_lower or 'trend' in response_lower:
