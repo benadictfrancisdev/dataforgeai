@@ -26,10 +26,11 @@ import {
   Copy,
   ThumbsUp,
   ThumbsDown,
-  RefreshCw
+  RefreshCw,
+  Server
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { aiAPI } from "@/services/api";
 
 interface Message {
   id: string;
