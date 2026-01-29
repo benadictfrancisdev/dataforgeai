@@ -312,13 +312,12 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Clustering Panel UI"
-    - "NLP Engine UI"
-    - "Visualization AI Chat"
-    - "Auto Dashboard"
-  stuck_tasks: []
+    - "Authentication System Fix"
+    - "Data Agent Access"
+  stuck_tasks:
+    - "Authentication System Fix"
   test_all: false
-  test_priority: "high_first"
+  test_priority: "stuck_first"
 
 agent_communication:
   - agent: "main"
