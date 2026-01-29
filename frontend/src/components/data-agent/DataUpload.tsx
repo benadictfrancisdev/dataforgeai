@@ -137,7 +137,10 @@ const DataUpload = ({ onDataLoaded }: DataUploadProps) => {
   };
 
   const handleLoadSampleData = async (sampleId: string) => {
-    if (!user) {
+    // Check if we're in demo mode
+    const isDemoMode = new URLSearchParams(window.location.search).get("demo") === "true";
+    
+    if (!user && !isDemoMode) {
       toast.error("Please sign in to load sample data");
       return;
     }
@@ -149,7 +152,20 @@ const DataUpload = ({ onDataLoaded }: DataUploadProps) => {
         throw new Error("Sample dataset not found");
       }
 
-      // Save to database
+      // In demo mode, skip database save and load directly
+      if (isDemoMode) {
+        onDataLoaded({
+          id: `demo-${sampleId}`,
+          name: sample.name,
+          rawData: sample.data,
+          columns: sample.columns,
+          status: "uploaded"
+        });
+        toast.success(`Loaded ${sample.data.length.toLocaleString()} rows from ${sample.name} (Demo Mode)`);
+        return;
+      }
+
+      // Save to database (authenticated mode)
       const { data: savedDataset, error } = await supabase
         .from('datasets')
         .insert([{
