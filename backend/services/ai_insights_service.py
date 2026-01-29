@@ -197,7 +197,7 @@ Please provide a helpful, clear response in plain conversational text. Do not us
             return {
                 "success": True,
                 "query": query,
-                "answer": str(response),
+                "answer": response_text,
                 "suggested_charts": charts,
                 "confidence": 0.95
             }
