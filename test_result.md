@@ -107,63 +107,81 @@ user_problem_statement: "Improve ML model and data analysis capabilities to buil
 backend:
   - task: "EDA (Exploratory Data Analysis) API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/services/data_analysis_service.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented perform_eda(), calculate_correlations(), detect_outliers(), get_distribution_analysis() methods"
+      - working: false
+        agent: "testing"
+        comment: "Initial test failed with JSON serialization error - numpy.int64 objects not JSON serializable"
+      - working: true
+        agent: "testing"
+        comment: "Fixed numpy type conversion issues by casting to Python native types (int, float). API now returns proper EDA results with basic_info, column_info, numeric_stats, and data_quality_score. Tested with 15 rows, 4 columns, 100% data quality score."
 
   - task: "ML Prediction Model API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/services/ml_models_service.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented train_prediction_model() with Random Forest classifier/regressor using scikit-learn"
+      - working: true
+        agent: "testing"
+        comment: "API working correctly. Successfully trained regression model with target 'score', features ['age', 'income']. Returns model_type, metrics (R² Score: -0.3154), feature_importance with top feature 'income' (0.5045). Handles auto model type detection."
 
   - task: "ML Clustering API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/services/ml_models_service.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented perform_clustering() with K-Means and DBSCAN algorithms"
+      - working: true
+        agent: "testing"
+        comment: "API working correctly. Successfully performed K-means clustering with 3 clusters, silhouette score 0.4038. Returns cluster_stats, scatter_data for visualization, and proper metrics. Cluster sizes: [4, 6, 5] records."
 
   - task: "Anomaly Detection API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/services/ml_models_service.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented detect_anomalies() using Isolation Forest algorithm"
+      - working: true
+        agent: "testing"
+        comment: "API working correctly. Successfully detected 2 anomalies (13.33% rate) using Isolation Forest. Returns severity breakdown (Critical=1, High=1), anomaly details with affected columns and scores. Proper contamination parameter handling."
 
   - task: "AI Insights API"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/services/ai_insights_service.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Implemented generate_insights(), answer_query(), explain_analysis(), generate_recommendations() using GPT-5.2 via emergentintegrations"
+      - working: true
+        agent: "testing"
+        comment: "API working correctly but takes ~20-25 seconds due to GPT-5.2 API calls. Successfully generates structured insights with key_findings (5 items), recommendations (5 items), trends, and data quality analysis. Returns proper JSON format."
 
   - task: "Forecasting API"
     implemented: true
@@ -176,6 +194,9 @@ backend:
       - working: "NA"
         agent: "main"
         comment: "Implemented simple_forecast() and multi_column_forecast() with linear regression, seasonal decomposition, and EMA methods"
+      - working: "NA"
+        agent: "testing"
+        comment: "Not tested in current session - focused on high priority APIs as requested. Forecasting API endpoints are /api/forecast/single and /api/forecast/multi."
 
 frontend:
   - task: "API Service Integration"
