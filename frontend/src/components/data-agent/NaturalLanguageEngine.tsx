@@ -155,8 +155,16 @@ const NaturalLanguageEngine = ({
         throw new Error(response.error || "Query failed");
       }
 
-      // Parse AI response
-      const aiResponse = response.data.answer || "I've analyzed your data. Here's what I found...";
+      // Parse AI response and clean markdown
+      let aiResponse = response.data.answer || "I've analyzed your data. Here's what I found...";
+      // Clean markdown formatting for readable text
+      aiResponse = aiResponse.replace(/\*\*/g, '');  // Remove bold
+      aiResponse = aiResponse.replace(/\*/g, '');    // Remove italic
+      aiResponse = aiResponse.replace(/#{1,6}\s*/g, '');  // Remove headers
+      aiResponse = aiResponse.replace(/`{1,3}/g, '');     // Remove code blocks
+      aiResponse = aiResponse.replace(/\n{3,}/g, '\n\n'); // Normalize line breaks
+      aiResponse = aiResponse.trim();
+      
       const charts = response.data.suggested_charts?.map(c => ({
         type: c.type as ChartSuggestion["type"],
         title: `${c.type} chart`,
