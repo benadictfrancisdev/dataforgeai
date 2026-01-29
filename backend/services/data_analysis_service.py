@@ -74,15 +74,15 @@ class DataAnalysisService:
                 if len(col_data) > 0:
                     numeric_stats.append({
                         "column": col,
-                        "mean": round(col_data.mean(), 4),
-                        "median": round(col_data.median(), 4),
-                        "std": round(col_data.std(), 4),
-                        "min": round(col_data.min(), 4),
-                        "max": round(col_data.max(), 4),
-                        "q1": round(col_data.quantile(0.25), 4),
-                        "q3": round(col_data.quantile(0.75), 4),
-                        "skewness": round(col_data.skew(), 4),
-                        "kurtosis": round(col_data.kurtosis(), 4)
+                        "mean": round(float(col_data.mean()), 4),
+                        "median": round(float(col_data.median()), 4),
+                        "std": round(float(col_data.std()), 4),
+                        "min": round(float(col_data.min()), 4),
+                        "max": round(float(col_data.max()), 4),
+                        "q1": round(float(col_data.quantile(0.25)), 4),
+                        "q3": round(float(col_data.quantile(0.75)), 4),
+                        "skewness": round(float(col_data.skew()), 4),
+                        "kurtosis": round(float(col_data.kurtosis()), 4)
                     })
             
             # Categorical statistics
