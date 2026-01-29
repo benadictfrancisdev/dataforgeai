@@ -60,10 +60,16 @@ const DataAgent = () => {
   const roomFromUrl = searchParams.get("room");
 
   useEffect(() => {
+    // Allow demo access for testing - skip auth check if demo mode
+    const isDemoMode = searchParams.get("demo") === "true";
+    if (isDemoMode) {
+      return; // Skip auth check for demo mode
+    }
+    
     if (!loading && !user) {
       navigate("/auth");
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, searchParams]);
 
   const handleDataLoaded = (data: DatasetState) => {
     setDataset(data);
