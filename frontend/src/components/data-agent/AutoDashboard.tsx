@@ -96,11 +96,138 @@ const AutoDashboard = ({ data, columns, columnTypes, datasetName, onDashboardCre
   };
 
   // Generate AI-powered dashboard suggestions
-  const generateSuggestions = () => {
+  const generateSuggestions = async () => {
     setIsGenerating(true);
     
-    setTimeout(() => {
+    try {
+      // Get AI insights for better suggestions
+      const insightsResponse = await aiAPI.generateInsights(
+        data.slice(0, 500),
+        columns,
+        datasetName,
+        ["visualization", "trends", "key metrics"]
+      );
+
       const newSuggestions: DashboardSuggestion[] = [];
+      let aiReasons: string[] = [];
+
+      if (insightsResponse.success && insightsResponse.data?.insights) {
+        const insights = insightsResponse.data.insights;
+        aiReasons = insights.key_findings || insights.recommendations || [];
+      }
+
+      // KPI cards for top metrics with AI-enhanced descriptions
+      numericColumns.slice(0, 4).forEach((col, i) => {
+        const values = data.map(row => Number(row[col])).filter(v => !isNaN(v));
+        const sum = values.reduce((a, b) => a + b, 0);
+        const avg = values.length > 0 ? sum / values.length : 0;
+        const min = Math.min(...values);
+        const max = Math.max(...values);
+
+        newSuggestions.push({
+          id: `kpi-${col}`,
+          type: "kpi",
+          title: `${col} Overview`,
+          description: `Average: ${avg.toFixed(2)}, Range: ${min.toFixed(0)} - ${max.toFixed(0)}`,
+          yAxis: col,
+          priority: i === 0 ? "high" : "medium",
+          reason: aiReasons[i] || `${col} is a key performance indicator for tracking business metrics`,
+          selected: i < 2
+        });
+      });
+
+      // Bar chart for categorical comparison
+      if (categoricalColumns.length > 0 && numericColumns.length > 0) {
+        newSuggestions.push({
+          id: `bar-${categoricalColumns[0]}-${numericColumns[0]}`,
+          type: "bar",
+          title: `${numericColumns[0]} by ${categoricalColumns[0]}`,
+          description: `Compare ${numericColumns[0]} values across ${categoricalColumns[0]} categories`,
+          xAxis: categoricalColumns[0],
+          yAxis: numericColumns[0],
+          priority: "high",
+          reason: "Bar charts effectively compare values across categories, revealing distribution patterns",
+          selected: true
+        });
+      }
+
+      // Pie chart for distribution
+      if (categoricalColumns.length > 0) {
+        const uniqueValues = new Set(data.map(row => String(row[categoricalColumns[0]])));
+        if (uniqueValues.size <= 10) {
+          newSuggestions.push({
+            id: `pie-${categoricalColumns[0]}`,
+            type: "pie",
+            title: `${categoricalColumns[0]} Distribution`,
+            description: `Shows the proportional breakdown of ${categoricalColumns[0]} (${uniqueValues.size} categories)`,
+            xAxis: categoricalColumns[0],
+            yAxis: categoricalColumns[0],
+            priority: "medium",
+            reason: "Pie charts are ideal for showing proportional distribution when categories are limited",
+            selected: true
+          });
+        }
+      }
+
+      // Line/Area chart for trends
+      if (numericColumns.length > 0) {
+        newSuggestions.push({
+          id: `line-${numericColumns[0]}`,
+          type: "line",
+          title: `${numericColumns[0]} Trend Analysis`,
+          description: `Track changes and patterns in ${numericColumns[0]} over the dataset`,
+          xAxis: columns[0],
+          yAxis: numericColumns[0],
+          priority: "high",
+          reason: "Line charts reveal trends, seasonality, and patterns over sequential data points",
+          selected: true
+        });
+
+        if (numericColumns.length > 1) {
+          newSuggestions.push({
+            id: `area-${numericColumns[1]}`,
+            type: "area",
+            title: `${numericColumns[1]} Area Analysis`,
+            description: `Visualize cumulative ${numericColumns[1]} with magnitude emphasis`,
+            xAxis: columns[0],
+            yAxis: numericColumns[1],
+            priority: "medium",
+            reason: "Area charts combine trend visualization with magnitude representation",
+            selected: false
+          });
+        }
+      }
+
+      // Scatter plot for correlation
+      if (numericColumns.length >= 2) {
+        newSuggestions.push({
+          id: `scatter-${numericColumns[0]}-${numericColumns[1]}`,
+          type: "scatter",
+          title: `${numericColumns[0]} vs ${numericColumns[1]} Correlation`,
+          description: `Analyze relationship and correlation between these variables`,
+          xAxis: numericColumns[0],
+          yAxis: numericColumns[1],
+          priority: "medium",
+          reason: "Scatter plots reveal correlations, clusters, and outliers between numeric variables",
+          selected: false
+        });
+      }
+
+      setSuggestions(newSuggestions);
+      toast.success(`Generated ${newSuggestions.length} AI-powered dashboard suggestions!`);
+
+    } catch (error) {
+      console.error("Error generating suggestions:", error);
+      // Fallback to basic suggestions
+      generateBasicSuggestions();
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // Fallback basic suggestions without AI
+  const generateBasicSuggestions = () => {
+    const newSuggestions: DashboardSuggestion[] = [];
 
       // KPI cards for top metrics
       numericColumns.slice(0, 4).forEach((col, i) => {
