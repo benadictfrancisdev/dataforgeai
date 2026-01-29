@@ -118,9 +118,15 @@ Sample stats: ${stats.slice(0, 3).map(s => `${s.column}(avg:${s.avg})`).join(", 
         throw new Error(response.error || "Failed to get AI response");
       }
 
-      // Clean markdown from response
+      // Clean markdown from response for readable text
       let answerText = response.data.answer || "I analyzed your data and here are my insights...";
-      answerText = answerText.replace(/\*\*/g, '').replace(/##/g, '').replace(/`/g, '');
+      answerText = answerText.replace(/\*\*/g, '');  // Remove bold
+      answerText = answerText.replace(/\*/g, '');    // Remove italic  
+      answerText = answerText.replace(/#{1,6}\s*/g, '');  // Remove headers
+      answerText = answerText.replace(/`{1,3}/g, '');     // Remove code blocks
+      answerText = answerText.replace(/__/g, '');    // Remove underscores
+      answerText = answerText.replace(/\n{3,}/g, '\n\n'); // Normalize line breaks
+      answerText = answerText.trim();
 
       const assistantMessage: Message = {
         role: "assistant",
