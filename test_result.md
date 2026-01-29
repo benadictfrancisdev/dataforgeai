@@ -267,11 +267,7 @@ metadata:
 
 test_plan:
   current_focus:
-    - "EDA API"
-    - "ML Prediction API"
-    - "ML Clustering API"
-    - "Anomaly Detection API"
-    - "AI Insights API"
+    - "Forecasting API"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -279,3 +275,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Implemented comprehensive data analysis backend with server-side ML using scikit-learn and AI insights using GPT-5.2 via emergentintegrations. All API endpoints are created. Please test backend APIs first using curl with sample data."
+  - agent: "testing"
+    message: "Backend testing completed successfully. All high-priority APIs tested and working: Health Check ✅, EDA API ✅ (fixed numpy serialization), Correlation API ✅, ML Prediction API ✅, ML Clustering API ✅, Anomaly Detection API ✅, AI Insights API ✅ (20s response time due to GPT-5.2). Fixed critical JSON serialization bug in EDA service. Only Forecasting API remains untested (medium priority)."
