@@ -263,13 +263,16 @@ frontend:
     implemented: true
     working: "NA"
     file: "/app/frontend/src/components/data-agent/NaturalLanguageEngine.tsx"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Updated to use backend AI API with GPT-5.2 - Fixed markdown symbol cleaning for clean chat responses"
+      - working: "NA"
+        agent: "testing"
+        comment: "BLOCKED BY AUTH: Cannot test due to authentication barrier. Code review shows proper GPT-5.2 integration with markdown cleaning, conversation history, and clean text responses. Demo modal confirms Natural Language Queries feature is implemented."
 
   - task: "Visualization AI Chat Update"
     implemented: true
