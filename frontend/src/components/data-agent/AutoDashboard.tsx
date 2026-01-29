@@ -325,9 +325,8 @@ const AutoDashboard = ({ data, columns, columnTypes, datasetName, onDashboardCre
       }
 
       setSuggestions(newSuggestions);
-      setIsGenerating(false);
       toast.success(`Generated ${newSuggestions.length} dashboard suggestions!`);
-    }, 1500);
+  };
   };
 
   const toggleSuggestion = (id: string) => {
