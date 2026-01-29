@@ -48,16 +48,16 @@ class BackendTester:
         """Log test messages."""
         print(f"[{level}] {message}")
     
-    def test_endpoint(self, method: str, endpoint: str, data: Dict[Any, Any] = None, expected_fields: list = None) -> Dict[str, Any]:
+    def test_endpoint(self, method: str, endpoint: str, data: Dict[Any, Any] = None, expected_fields: list = None, timeout: int = 30) -> Dict[str, Any]:
         """Test a single endpoint and return results."""
         url = f"{self.base_url}{endpoint}"
         self.log(f"Testing {method} {endpoint}")
         
         try:
             if method.upper() == "GET":
-                response = self.session.get(url, timeout=30)
+                response = self.session.get(url, timeout=timeout)
             elif method.upper() == "POST":
-                response = self.session.post(url, json=data, timeout=30)
+                response = self.session.post(url, json=data, timeout=timeout)
             else:
                 return {"success": False, "error": f"Unsupported method: {method}"}
             
@@ -109,7 +109,7 @@ class BackendTester:
             }
             
         except requests.exceptions.Timeout:
-            return {"success": False, "error": "Request timeout (30s)"}
+            return {"success": False, "error": f"Request timeout ({timeout}s)"}
         except requests.exceptions.ConnectionError as e:
             return {"success": False, "error": f"Connection error: {str(e)}"}
         except Exception as e:
