@@ -15,11 +15,13 @@ import {
   Sparkles,
   Users,
   Lightbulb,
-  Target
+  Target,
+  Server,
+  Cpu
 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { MLModel } from "./MLWorkbench";
+import { mlAPI, aiAPI } from "@/services/api";
 import {
   ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ZAxis, Legend, Cell
@@ -59,231 +61,134 @@ const ClusteringPanel = ({
   const [numClusters, setNumClusters] = useState(3);
   const [isTraining, setIsTraining] = useState(false);
   const [progress, setProgress] = useState<{ stage: string; progress: number; message: string } | null>(null);
+  const [aiExplanation, setAiExplanation] = useState<string>("");
   const [result, setResult] = useState<{
     clusters: ClusterResult[];
     scatterData: { x: number; y: number; cluster: number }[];
     xAxis: string;
     yAxis: string;
     silhouetteScore: number;
+    calinskiScore: number;
   } | null>(null);
 
-  // K-Means implementation
-  const runKMeans = useCallback(async () => {
+  // Run clustering using backend API
+  const runClustering = useCallback(async () => {
     if (numericColumns.length < 2) {
       toast.error("Need at least 2 numeric columns for clustering");
       return;
     }
 
     setIsTraining(true);
-    setProgress({ stage: "Preparing", progress: 10, message: "Preparing data..." });
+    setProgress({ stage: "Connecting", progress: 10, message: "Connecting to ML server..." });
 
     try {
-      // Prepare and normalize data
-      const features = numericColumns.slice(0, 5); // Use top 5 numeric columns
-      const featureData: number[][] = [];
-      const stats: { mean: number; std: number }[] = [];
+      setProgress({ stage: "Uploading", progress: 25, message: "Uploading data for clustering..." });
 
-      // Calculate statistics
-      features.forEach((f, i) => {
-        const values = data.map(row => Number(row[f])).filter(v => !isNaN(v));
-        const mean = values.reduce((a, b) => a + b, 0) / values.length;
-        const std = Math.sqrt(values.reduce((sq, n) => sq + Math.pow(n - mean, 2), 0) / values.length) || 1;
-        stats[i] = { mean, std };
-      });
+      // Call backend ML API
+      const response = await mlAPI.performClustering(
+        data,
+        numericColumns.slice(0, 10),
+        autoDetectK ? undefined : numClusters,
+        algorithm
+      );
 
-      // Normalize data
-      data.forEach(row => {
-        const point = features.map((f, i) => {
-          const val = Number(row[f]);
-          return isNaN(val) ? 0 : (val - stats[i].mean) / stats[i].std;
-        });
-        featureData.push(point);
-      });
+      setProgress({ stage: "Clustering", progress: 60, message: `Running ${algorithm.toUpperCase()} clustering...` });
 
-      await new Promise(r => setTimeout(r, 300));
-      setProgress({ stage: "Optimizing", progress: 30, message: "Finding optimal number of clusters..." });
-
-      // Elbow method to find optimal k
-      let optimalK = numClusters;
-      if (autoDetectK) {
-        const inertias: number[] = [];
-        for (let k = 2; k <= Math.min(8, Math.floor(data.length / 5)); k++) {
-          const { assignments, centroids } = kMeansIterate(featureData, k, 10);
-          let inertia = 0;
-          assignments.forEach((cluster, i) => {
-            const centroid = centroids[cluster];
-            inertia += featureData[i].reduce((sum, val, j) => sum + Math.pow(val - centroid[j], 2), 0);
-          });
-          inertias.push(inertia);
-        }
-
-        // Find elbow point
-        let maxDiff = 0;
-        for (let i = 1; i < inertias.length - 1; i++) {
-          const diff = Math.abs((inertias[i - 1] - inertias[i]) - (inertias[i] - inertias[i + 1]));
-          if (diff > maxDiff) {
-            maxDiff = diff;
-            optimalK = i + 2;
-          }
-        }
-        optimalK = Math.max(2, Math.min(6, optimalK));
+      if (!response.success || !response.data) {
+        throw new Error(response.error || "Clustering failed");
       }
 
-      await new Promise(r => setTimeout(r, 400));
-      setProgress({ stage: "Clustering", progress: 60, message: `Running K-Means with ${optimalK} clusters...` });
+      const clusterResult = response.data;
 
-      // Final K-Means
-      const { assignments, centroids } = kMeansIterate(featureData, optimalK, 50);
+      setProgress({ stage: "Analyzing", progress: 80, message: "Analyzing cluster characteristics..." });
 
-      // Calculate silhouette score
-      let silhouetteSum = 0;
-      let validPoints = 0;
-      assignments.forEach((cluster, i) => {
-        const sameCluster = assignments.filter((c, j) => c === cluster && j !== i);
-        if (sameCluster.length === 0) return;
+      // Get AI-generated cluster names and recommendations
+      const clusterStats: ClusterResult[] = clusterResult.cluster_stats.map((stat, i) => ({
+        id: stat.cluster_id,
+        name: `Cluster ${stat.cluster_id + 1}`,
+        count: stat.size,
+        percentage: stat.percentage,
+        centroid: stat.centroid,
+        characteristics: "",
+        recommendation: ""
+      }));
 
-        // Average distance to same cluster
-        let a = 0;
-        sameCluster.forEach((_, j) => {
-          const otherIdx = assignments.findIndex((c, idx) => c === cluster && idx !== i && idx > i - sameCluster.length - 1);
-          if (otherIdx >= 0) {
-            a += Math.sqrt(featureData[i].reduce((sum, val, k) => sum + Math.pow(val - featureData[otherIdx][k], 2), 0));
-          }
-        });
-        a = sameCluster.length > 0 ? a / sameCluster.length : 0;
-
-        // Minimum average distance to other clusters
-        let b = Infinity;
-        for (let c = 0; c < optimalK; c++) {
-          if (c === cluster) continue;
-          const otherCluster = assignments.filter((cl, j) => cl === c);
-          if (otherCluster.length === 0) continue;
-          let dist = 0;
-          otherCluster.forEach((_, j) => {
-            const otherIdx = assignments.findIndex((cl, idx) => cl === c);
-            if (otherIdx >= 0) {
-              dist += Math.sqrt(featureData[i].reduce((sum, val, k) => sum + Math.pow(val - featureData[otherIdx][k], 2), 0));
-            }
-          });
-          b = Math.min(b, dist / otherCluster.length);
-        }
-
-        if (b !== Infinity && Math.max(a, b) > 0) {
-          silhouetteSum += (b - a) / Math.max(a, b);
-          validPoints++;
-        }
-      });
-
-      const silhouetteScore = validPoints > 0 ? silhouetteSum / validPoints : 0;
-
-      await new Promise(r => setTimeout(r, 300));
-      setProgress({ stage: "Analyzing", progress: 80, message: "Generating cluster insights..." });
-
-      // Create cluster results
-      const clusterResults: ClusterResult[] = [];
-      for (let c = 0; c < optimalK; c++) {
-        const clusterIndices = assignments.map((a, i) => a === c ? i : -1).filter(i => i >= 0);
-        const count = clusterIndices.length;
-        const percentage = (count / data.length) * 100;
-
-        // Calculate centroid in original scale
-        const centroid: Record<string, number> = {};
-        features.forEach((f, fi) => {
-          const sum = clusterIndices.reduce((s, i) => s + (Number(data[i][f]) || 0), 0);
-          centroid[f] = count > 0 ? sum / count : 0;
-        });
-
-        clusterResults.push({
-          id: c,
-          name: `Cluster ${c + 1}`,
-          count,
-          percentage,
-          centroid,
-          characteristics: "",
-          recommendation: ""
-        });
-      }
-
-      // Get AI-generated names and recommendations
       try {
-        const { data: aiData } = await supabase.functions.invoke('data-agent', {
-          body: {
-            action: 'nlp-query',
-            query: `Name these ${optimalK} customer segments and provide marketing recommendations. For each cluster, give a creative name (like "High-Value Customers") and one actionable recommendation.
-            
-            Clusters with their average values:
-            ${clusterResults.map(c => `Cluster ${c.id + 1} (${c.count} members, ${c.percentage.toFixed(1)}%): ${Object.entries(c.centroid).map(([k, v]) => `${k}=${v.toFixed(2)}`).join(", ")}`).join("\n")}
-            
-            Respond in this exact format for each cluster:
-            Cluster 1: [Name] | [Recommendation]
-            Cluster 2: [Name] | [Recommendation]
-            ...`,
-            data: []
-          }
-        });
+        setProgress({ stage: "AI Analysis", progress: 90, message: "Generating AI insights for clusters..." });
 
-        const response = aiData?.answer || aiData?.response || "";
-        const lines = response.split("\n").filter((l: string) => l.includes(":"));
-        
-        lines.forEach((line: string, i: number) => {
-          if (i < clusterResults.length) {
-            const parts = line.split("|");
-            if (parts.length >= 2) {
-              const namePart = parts[0].split(":")[1]?.trim() || `Cluster ${i + 1}`;
-              clusterResults[i].name = namePart;
-              clusterResults[i].recommendation = parts[1].trim();
-            }
+        const explainResponse = await aiAPI.explainAnalysis(
+          "clustering",
+          {
+            n_clusters: clusterResult.n_clusters,
+            silhouette_score: clusterResult.metrics.silhouette_score,
+            cluster_stats: clusterResult.cluster_stats
+          },
+          `Dataset: ${datasetName}, ${data.length} rows`
+        );
+
+        if (explainResponse.success && explainResponse.data) {
+          setAiExplanation(explainResponse.data.explanation);
+        }
+
+        // Try to get recommendations for each cluster
+        const recsResponse = await aiAPI.generateRecommendations(
+          data.slice(0, 100),
+          numericColumns.slice(0, 5),
+          { clusters: clusterResult.cluster_stats },
+          "Customer segmentation analysis"
+        );
+
+        if (recsResponse.success && recsResponse.data?.recommendations) {
+          const recs = recsResponse.data.recommendations;
+          if (recs.immediate_actions) {
+            clusterStats.forEach((cluster, i) => {
+              if (recs.immediate_actions && recs.immediate_actions[i]) {
+                cluster.recommendation = recs.immediate_actions[i];
+              }
+            });
           }
-        });
+        }
       } catch {
         // Fallback names
         const names = ["Value Seekers", "Premium Customers", "Casual Browsers", "Power Users", "New Adopters", "Loyal Base"];
-        clusterResults.forEach((c, i) => {
+        clusterStats.forEach((c, i) => {
           c.name = names[i] || `Segment ${i + 1}`;
           c.recommendation = "Focus on personalized engagement strategies for this segment.";
         });
       }
 
-      // Prepare scatter data for visualization
-      const xAxis = features[0];
-      const yAxis = features[1] || features[0];
-      const scatterData = data.map((row, i) => ({
-        x: Number(row[xAxis]) || 0,
-        y: Number(row[yAxis]) || 0,
-        cluster: assignments[i]
-      }));
-
       setProgress({ stage: "Complete", progress: 100, message: "Clustering complete!" });
 
       setResult({
-        clusters: clusterResults,
-        scatterData,
-        xAxis,
-        yAxis,
-        silhouetteScore: Math.max(0, Math.min(1, silhouetteScore + 0.3))
+        clusters: clusterStats,
+        scatterData: clusterResult.scatter_data,
+        xAxis: clusterResult.x_axis,
+        yAxis: clusterResult.y_axis,
+        silhouetteScore: clusterResult.metrics.silhouette_score,
+        calinskiScore: clusterResult.metrics.calinski_harabasz_score
       });
 
       // Register model
       const model: MLModel = {
         id: `cluster-${Date.now()}`,
-        name: `K-Means (${optimalK} clusters)`,
+        name: `${algorithm.toUpperCase()} (${clusterResult.n_clusters} clusters)`,
         type: "clustering",
-        clusters: optimalK,
+        clusters: clusterResult.n_clusters,
         trainedAt: new Date(),
         status: "ready",
-        explanation: `Identified ${optimalK} distinct segments with silhouette score of ${(silhouetteScore + 0.3).toFixed(2)}`
+        explanation: `Identified ${clusterResult.n_clusters} distinct segments with silhouette score of ${clusterResult.metrics.silhouette_score.toFixed(2)}`
       };
 
       onModelTrained(model);
-      toast.success(`Found ${optimalK} clusters!`);
+      toast.success(`Found ${clusterResult.n_clusters} clusters using server-side ML!`);
 
     } catch (error) {
       console.error("Clustering error:", error);
-      toast.error("Clustering failed");
+      toast.error(error instanceof Error ? error.message : "Clustering failed");
     } finally {
       setIsTraining(false);
     }
-  }, [data, numericColumns, numClusters, autoDetectK, onModelTrained]);
+  }, [data, numericColumns, numClusters, autoDetectK, algorithm, datasetName, onModelTrained]);
 
   return (
     <div className="space-y-6">
@@ -292,10 +197,14 @@ const ClusteringPanel = ({
         <CardHeader>
           <CardTitle className="text-lg flex items-center gap-2">
             <GitBranch className="h-5 w-5 text-primary" />
-            Clustering Analysis
+            Server-Side Clustering Analysis
+            <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-500 border-green-500/30">
+              <Server className="h-3 w-3 mr-1" />
+              Backend ML
+            </Badge>
           </CardTitle>
           <CardDescription>
-            Automatically discover segments and patterns in your data
+            Automatically discover segments and patterns using scikit-learn on the server
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -315,7 +224,7 @@ const ClusteringPanel = ({
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Auto-detect clusters</Label>
+                <Label>Auto-detect clusters (Elbow Method)</Label>
                 <Switch checked={autoDetectK} onCheckedChange={setAutoDetectK} />
               </div>
               {!autoDetectK && (
@@ -333,20 +242,33 @@ const ClusteringPanel = ({
             </div>
           </div>
 
+          <div className="bg-gradient-to-br from-primary/5 to-accent/5 rounded-lg p-4 space-y-2 border border-primary/20">
+            <div className="flex items-center gap-2 text-sm">
+              <Cpu className="h-4 w-4 text-primary" />
+              <span className="font-medium">Server-Side Processing</span>
+            </div>
+            <ul className="text-sm text-muted-foreground space-y-1 ml-6">
+              <li>• <span className="text-primary font-medium">Algorithm:</span> scikit-learn {algorithm === "kmeans" ? "KMeans" : "DBSCAN"}</li>
+              <li>• <span className="text-primary font-medium">Features:</span> {numericColumns.slice(0, 10).length} numeric columns</li>
+              <li>• <span className="text-primary font-medium">Optimization:</span> Silhouette & Calinski-Harabasz scores</li>
+              <li>• <span className="text-primary font-medium">AI Insights:</span> GPT-5.2 powered explanations</li>
+            </ul>
+          </div>
+
           <Button
-            onClick={runKMeans}
+            onClick={runClustering}
             disabled={isTraining || numericColumns.length < 2}
             className="w-full sm:w-auto bg-gradient-to-r from-primary to-accent"
           >
             {isTraining ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Clustering...
+                Clustering on Server...
               </>
             ) : (
               <>
                 <Play className="h-4 w-4 mr-2" />
-                Run Clustering
+                Run Clustering (Server-Side ML)
               </>
             )}
           </Button>
@@ -355,11 +277,14 @@ const ClusteringPanel = ({
 
       {/* Progress */}
       {progress && isTraining && (
-        <Card>
+        <Card className="border-primary/30">
           <CardContent className="py-6">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{progress.stage}</span>
+                <span className="text-sm font-medium flex items-center gap-2">
+                  <Server className="h-4 w-4 text-primary animate-pulse" />
+                  {progress.stage}
+                </span>
                 <span className="text-sm text-muted-foreground">{progress.progress}%</span>
               </div>
               <Progress value={progress.progress} className="h-2" />
@@ -381,21 +306,54 @@ const ClusteringPanel = ({
                     <CheckCircle2 className="h-8 w-8 text-blue-500" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-lg">Clustering Complete</h3>
+                    <h3 className="font-semibold text-lg flex items-center gap-2">
+                      Clustering Complete
+                      <Badge variant="outline" className="text-xs bg-primary/10 text-primary">
+                        <Server className="h-3 w-3 mr-1" />
+                        Server ML
+                      </Badge>
+                    </h3>
                     <p className="text-sm text-muted-foreground">
                       Found {result.clusters.length} distinct segments
                     </p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-blue-500">
-                    {result.silhouetteScore.toFixed(2)}
-                  </p>
-                  <p className="text-sm text-muted-foreground">Silhouette Score</p>
+                <div className="flex gap-4">
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-blue-500">
+                      {result.silhouetteScore.toFixed(2)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Silhouette Score</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-purple-500">
+                      {result.calinskiScore.toFixed(0)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Calinski-Harabasz</p>
+                  </div>
                 </div>
               </div>
             </CardContent>
           </Card>
+
+          {/* AI Explanation */}
+          {aiExplanation && (
+            <Card className="bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/30">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4 text-yellow-500" />
+                  AI Analysis
+                  <Badge variant="secondary" className="text-xs bg-purple-500/10 text-purple-500">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    GPT-5.2
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">{aiExplanation}</p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Scatter Plot */}
           <Card>
@@ -425,7 +383,7 @@ const ClusteringPanel = ({
                       <Scatter
                         key={cluster.id}
                         name={cluster.name}
-                        data={result.scatterData.filter(d => d.cluster === i).slice(0, 200)}
+                        data={result.scatterData.filter(d => d.cluster === cluster.id).slice(0, 200)}
                         fill={CLUSTER_COLORS[i % CLUSTER_COLORS.length]}
                       />
                     ))}
@@ -478,56 +436,5 @@ const ClusteringPanel = ({
     </div>
   );
 };
-
-// K-Means helper function
-function kMeansIterate(data: number[][], k: number, maxIterations: number) {
-  const n = data.length;
-  const dim = data[0].length;
-
-  // Initialize centroids randomly
-  const centroids: number[][] = [];
-  const usedIndices = new Set<number>();
-  while (centroids.length < k) {
-    const idx = Math.floor(Math.random() * n);
-    if (!usedIndices.has(idx)) {
-      usedIndices.add(idx);
-      centroids.push([...data[idx]]);
-    }
-  }
-
-  let assignments = new Array(n).fill(0);
-
-  for (let iter = 0; iter < maxIterations; iter++) {
-    // Assign points to nearest centroid
-    const newAssignments = data.map(point => {
-      let minDist = Infinity;
-      let nearest = 0;
-      centroids.forEach((centroid, c) => {
-        const dist = point.reduce((sum, val, i) => sum + Math.pow(val - centroid[i], 2), 0);
-        if (dist < minDist) {
-          minDist = dist;
-          nearest = c;
-        }
-      });
-      return nearest;
-    });
-
-    // Check convergence
-    if (JSON.stringify(assignments) === JSON.stringify(newAssignments)) break;
-    assignments = newAssignments;
-
-    // Update centroids
-    for (let c = 0; c < k; c++) {
-      const clusterPoints = data.filter((_, i) => assignments[i] === c);
-      if (clusterPoints.length > 0) {
-        for (let d = 0; d < dim; d++) {
-          centroids[c][d] = clusterPoints.reduce((sum, p) => sum + p[d], 0) / clusterPoints.length;
-        }
-      }
-    }
-  }
-
-  return { assignments, centroids };
-}
 
 export default ClusteringPanel;
