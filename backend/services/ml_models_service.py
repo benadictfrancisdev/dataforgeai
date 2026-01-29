@@ -240,14 +240,14 @@ class MLModelsService:
                 cluster_data = df[df['cluster'] == cluster_id]
                 stats = {
                     "cluster_id": int(cluster_id),
-                    "size": len(cluster_data),
-                    "percentage": round((len(cluster_data) / len(df)) * 100, 2),
+                    "size": int(len(cluster_data)),
+                    "percentage": float(round((len(cluster_data) / len(df)) * 100, 2)),
                     "centroid": {}
                 }
                 
                 for col in cols:
                     col_vals = pd.to_numeric(cluster_data[col], errors='coerce')
-                    stats["centroid"][col] = round(col_vals.mean(), 4) if len(col_vals) > 0 else 0
+                    stats["centroid"][col] = float(round(col_vals.mean(), 4)) if len(col_vals) > 0 else 0.0
                 
                 cluster_stats.append(stats)
             
@@ -255,19 +255,19 @@ class MLModelsService:
             scatter_data = []
             for i in range(min(500, len(X))):
                 scatter_data.append({
-                    "x": round(float(X.iloc[i, 0]), 4),
-                    "y": round(float(X.iloc[i, 1]), 4) if len(cols) > 1 else 0,
+                    "x": float(round(float(X.iloc[i, 0]), 4)),
+                    "y": float(round(float(X.iloc[i, 1]), 4)) if len(cols) > 1 else 0.0,
                     "cluster": int(labels[i])
                 })
             
             return {
                 "success": True,
                 "algorithm": algorithm,
-                "n_clusters": n_clusters,
+                "n_clusters": int(n_clusters),
                 "feature_columns": cols,
                 "metrics": {
-                    "silhouette_score": silhouette,
-                    "calinski_harabasz_score": calinski
+                    "silhouette_score": float(silhouette),
+                    "calinski_harabasz_score": float(calinski)
                 },
                 "cluster_stats": cluster_stats,
                 "scatter_data": scatter_data,
