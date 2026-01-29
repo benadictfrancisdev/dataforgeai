@@ -398,12 +398,13 @@ const NaturalLanguageEngine = ({
             <div>
               <CardTitle className="text-lg flex items-center gap-2">
                 Natural Language Engine
-                <Badge variant="secondary" className="text-xs bg-green-500/10 text-green-500 border-green-500/30">
-                  AI-Powered
+                <Badge variant="secondary" className="text-xs bg-purple-500/10 text-purple-500 border-purple-500/30">
+                  <Server className="h-3 w-3 mr-1" />
+                  GPT-5.2
                 </Badge>
               </CardTitle>
               <CardDescription className="text-xs">
-                Ask questions about your data in plain English
+                Ask questions about your data using AI-powered analysis
               </CardDescription>
             </div>
           </div>
