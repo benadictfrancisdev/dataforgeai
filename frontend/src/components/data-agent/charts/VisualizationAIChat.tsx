@@ -106,32 +106,42 @@ Sample stats: ${stats.slice(0, 3).map(s => `${s.column}(avg:${s.avg})`).join(", 
         content: m.content
       }));
 
-      const { data: response, error } = await supabase.functions.invoke('data-agent', {
-        body: {
-          action: 'visualization-chat',
-          datasetName,
-          question: input.trim(),
-          dataSummary: getDataSummary(),
-          columns,
-          columnTypes,
-          conversationHistory
-        }
-      });
+      // Use backend AI API
+      const response = await aiAPI.answerQuery(
+        data.slice(0, 500),
+        columns,
+        input.trim(),
+        conversationHistory
+      );
 
-      if (error) throw error;
+      if (!response.success || !response.data) {
+        throw new Error(response.error || "Failed to get AI response");
+      }
+
+      // Clean markdown from response
+      let answerText = response.data.answer || "I analyzed your data and here are my insights...";
+      answerText = answerText.replace(/\*\*/g, '').replace(/##/g, '').replace(/`/g, '');
 
       const assistantMessage: Message = {
         role: "assistant",
-        content: response?.answer || response?.content || "I analyzed your data and here are my insights...",
+        content: answerText,
         timestamp: new Date(),
-        suggestions: response?.suggestions || []
+        suggestions: response.data.suggested_charts?.map(c => `Create a ${c.type} chart`) || []
       };
 
       setMessages(prev => [...prev, assistantMessage]);
 
       // Handle chart suggestions if available
-      if (response?.chartSuggestion && onChartSuggestion) {
-        onChartSuggestion(response.chartSuggestion);
+      if (response.data.suggested_charts?.length && onChartSuggestion) {
+        const chartType = response.data.suggested_charts[0].type;
+        const numericCols = columns.filter(c => columnTypes[c] === "numeric");
+        const categoricalCols = columns.filter(c => columnTypes[c] === "categorical");
+        
+        onChartSuggestion({
+          type: chartType,
+          xAxis: categoricalCols[0] || columns[0],
+          yAxis: numericCols[0] || columns[1] || columns[0]
+        });
       }
 
     } catch (error) {
