@@ -249,10 +249,10 @@ class DataAnalysisService:
                     "column": col,
                     "outlier_count": len(outlier_indices),
                     "outlier_pct": round((len(outlier_indices) / len(df)) * 100, 2),
-                    "lower_bound": round(lower_bound, 4),
-                    "upper_bound": round(upper_bound, 4),
+                    "lower_bound": safe_float(lower_bound),
+                    "upper_bound": safe_float(upper_bound),
                     "outlier_indices": outlier_indices[:50],
-                    "outlier_values": [round(v, 4) for v in outlier_values[:50]]
+                    "outlier_values": [safe_float(v) for v in outlier_values[:50]]
                 })
             
             return {
