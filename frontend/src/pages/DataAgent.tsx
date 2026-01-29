@@ -103,7 +103,9 @@ const DataAgent = () => {
     );
   }
 
-  if (!user) {
+  // Allow demo access - skip auth check if demo mode
+  const isDemoMode = searchParams.get("demo") === "true";
+  if (!user && !isDemoMode) {
     return null;
   }
 
