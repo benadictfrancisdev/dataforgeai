@@ -3,8 +3,22 @@ import numpy as np
 from typing import Dict, List, Any, Optional
 from scipy import stats
 import logging
+import math
 
 logger = logging.getLogger(__name__)
+
+
+def safe_float(value, default=0.0):
+    """Convert value to JSON-safe float, handling NaN and Inf."""
+    if value is None:
+        return default
+    try:
+        f = float(value)
+        if math.isnan(f) or math.isinf(f):
+            return default
+        return round(f, 4)
+    except (TypeError, ValueError):
+        return default
 
 
 class DataAnalysisService:
