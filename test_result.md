@@ -233,7 +233,7 @@ frontend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Updated to use backend ML API for server-side clustering"
+        comment: "Updated to use backend ML API for server-side clustering - Fixed numpy int64 serialization issue"
 
   - task: "Anomaly Panel Update"
     implemented: true
@@ -257,17 +257,44 @@ frontend:
     status_history:
       - working: "NA"
         agent: "main"
-        comment: "Updated to use backend AI API with GPT-5.2"
+        comment: "Updated to use backend AI API with GPT-5.2 - Fixed markdown symbol cleaning for clean chat responses"
+
+  - task: "Visualization AI Chat Update"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/data-agent/charts/VisualizationAIChat.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Updated to use backend AI API for chart recommendations and insights"
+
+  - task: "Auto Dashboard Update"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/components/data-agent/AutoDashboard.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Updated to use AI-powered insights for dashboard suggestions"
 
 metadata:
   created_by: "main_agent"
-  version: "1.0"
-  test_sequence: 2
-  run_ui: false
+  version: "1.1"
+  test_sequence: 3
+  run_ui: true
 
 test_plan:
   current_focus:
-    - "Forecasting API"
+    - "Clustering Panel UI"
+    - "NLP Engine UI"
+    - "Visualization AI Chat"
+    - "Auto Dashboard"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -277,3 +304,5 @@ agent_communication:
     message: "Implemented comprehensive data analysis backend with server-side ML using scikit-learn and AI insights using GPT-5.2 via emergentintegrations. All API endpoints are created. Please test backend APIs first using curl with sample data."
   - agent: "testing"
     message: "Backend testing completed successfully. All high-priority APIs tested and working: Health Check ✅, EDA API ✅ (fixed numpy serialization), Correlation API ✅, ML Prediction API ✅, ML Clustering API ✅, Anomaly Detection API ✅, AI Insights API ✅ (20s response time due to GPT-5.2). Fixed critical JSON serialization bug in EDA service. Only Forecasting API remains untested (medium priority)."
+  - agent: "main"
+    message: "Fixed additional issues: 1) Clustering API numpy int64 serialization bug, 2) AI Insights service now returns clean text without markdown symbols, 3) Updated VisualizationAIChat and AutoDashboard to use backend AI. Please run frontend testing to verify ML Workbench, NLP Engine, and Visualization features work end-to-end."
