@@ -13,6 +13,8 @@ export default defineConfig(({ mode }) => ({
     host: '0.0.0.0',
     allowedHosts: true
   },
+  // Support both VITE_ and REACT_APP_ prefixes for env variables
+  envPrefix: ['VITE_', 'REACT_APP_'],
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
