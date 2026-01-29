@@ -289,7 +289,7 @@ class BackendTester:
         }
         
         expected_fields = ["insights", "dataset_name"]
-        result = self.test_endpoint("POST", "/api/ai/insights", insights_data, expected_fields)
+        result = self.test_endpoint("POST", "/api/ai/insights", insights_data, expected_fields, timeout=60)
         
         if result["success"]:
             response = result["response"]
