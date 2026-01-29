@@ -99,8 +99,8 @@ class DataAnalysisService:
             
             # Data quality score
             total_cells = len(df) * len(df.columns)
-            missing_cells = df.isna().sum().sum()
-            quality_score = round((1 - missing_cells / total_cells) * 100, 2)
+            missing_cells = int(df.isna().sum().sum())
+            quality_score = round(float((1 - missing_cells / total_cells) * 100), 2)
             
             return {
                 "success": True,
