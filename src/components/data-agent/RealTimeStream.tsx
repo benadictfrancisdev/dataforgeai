@@ -62,7 +62,7 @@ const RealTimeStream = ({ data, columns, columnTypes, datasetName }: RealTimeStr
   const [selectedColumn, setSelectedColumn] = useState<string>("");
   const [metrics, setMetrics] = useState<MetricCard[]>([]);
   const [dataIndex, setDataIndex] = useState(0);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const numericColumns = columns.filter(c => columnTypes[c] === "numeric");
 

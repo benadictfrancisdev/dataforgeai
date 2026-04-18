@@ -81,7 +81,7 @@ export const CollaborationPanel = ({
   const [activeTab, setActiveTab] = useState<"chat" | "activity">("chat");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout>();
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   // Auto-scroll to latest message
   useEffect(() => {
