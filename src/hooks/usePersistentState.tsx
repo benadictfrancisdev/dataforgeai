@@ -15,7 +15,7 @@ export function usePersistentState<T>(options: UsePersistentStateOptions<T>) {
   const [state, setState] = useState<T>(defaultValue);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const initialLoadDone = useRef(false);
 
   // Load state from database

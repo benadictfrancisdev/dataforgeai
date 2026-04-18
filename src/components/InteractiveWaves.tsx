@@ -215,7 +215,7 @@ const InteractiveWaves = () => {
       mouseRef.current.isMoving = false;
     };
 
-    let mouseStopTimer: NodeJS.Timeout;
+    let mouseStopTimer: ReturnType<typeof setTimeout>;
     const handleMouseMoveWithStop = (e: MouseEvent) => {
       handleMouseMove(e);
       clearTimeout(mouseStopTimer);
